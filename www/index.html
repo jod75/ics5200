@@ -4,8 +4,12 @@
 	<script src="js/jquery-3.1.1.min.js"></script>
 	<script src="js/ics5200.js"></script>
 	<script src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script>	
+    <script src="https://cdn.jsdelivr.net/jquery.loadingoverlay/latest/loadingoverlay.min.js"></script>	
+    <script src="https://cdn.jsdelivr.net/jquery.loadingoverlay/latest/loadingoverlay_progress.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 	<link rel="stylesheet" href="css/styles.css">
 	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.13/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 </head>	
 	
 <body>
@@ -16,23 +20,59 @@
 		
 		<div class="wrapright"> 	  
 			<div class="right" id="graph-container">
-				<table id="similarityTable" class="display" cellspacing="0" width="70%">
-					<thead>
-						<tr>
-							<th>Row ID</th>
-							<th>Assay ID</th>
-							<th>Mol Reg No</th>
-							<th>Std Relation</th>
-							<th>Std Value</th>
-							<th>Std Units</th>
-							<th>Std Type</th>
-							<th>pChEMBL Value</th>
-							<th>Component ID</th>
-							<th>Mol Reg No</th>
-							<th>Similarity</th>
-						</tr>
-					</thead>
-				</table>
+                <div id="tabs">
+                  <ul>
+                    <li><a href="#tabs-1">Query settings</a></li>
+                    <li><a href="#tabs-2">Test Data</a></li>                    
+                    <li><a href="#tabs-3">Similarity Experiment</a></li>      
+                  </ul>
+                  <div id="tabs-1">
+                  
+                  </div>
+                  <div id="tabs-2">     
+                    <table id="t01">
+                        <tr>
+                            <td>Selected molecule:<div id="selectedTestMolecule"></div><br/><div id="testmolecule"></div></td>
+                            <td>
+                            <table id="testdataTable" class="display" cellspacing="0" width="70%">
+                            <thead>
+                                <tr>
+                                    <th>Row ID</th>
+                                    <th>Assay ID</th>
+                                    <th>Mol Reg No</th>
+                                    <th>Std Relation</th>
+                                    <th>Std Value</th>
+                                    <th>Std Units</th>
+                                    <th>Std Type</th>
+                                    <th>pChEMBL Value</th>
+                                    <th>Component ID</th>							
+                                </tr>
+                            </thead>
+                            </table>  
+                            </td>
+                        </tr>
+                    </table>
+                  </div>
+                  <div id="tabs-3">                    
+                    <table id="similarityTable" class="display" cellspacing="0" width="70%">
+                        <thead>
+                            <tr>
+                                <th>Row ID</th>
+                                <th>Assay ID</th>
+                                <th>Mol Reg No</th>
+                                <th>Std Relation</th>
+                                <th>Std Value</th>
+                                <th>Std Units</th>
+                                <th>Std Type</th>
+                                <th>pChEMBL Value</th>
+                                <th>Component ID</th>
+                                <th>Mol Reg No</th>
+                                <th>Similarity</th>
+                            </tr>
+                        </thead>
+                    </table>
+                  </div>                  
+                </div>
 			</div>
 		</div>    
 		
@@ -47,8 +87,12 @@
 		  <br/>
 		  <br/>
           <div id="queryMolecule"></div>
+          <div class="lefttext"><span>Test Target ID(s):</span><br/>
+            <span class="lefttext" id="targets">-</span>
+          </div>
           <br/>
 		  <div id="molecule"></div>
+          <div class="lefttext" id="selectedExperimentMolecule"></div>
 		</div> 		
 		
 		<div class="footer">

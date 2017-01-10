@@ -25,28 +25,35 @@ class CustomEncoder(json.JSONEncoder):
             return float(o)
         return super(CustomEncoder, self).default(o)
 
-@main.route("/<int:userId>/sample/<int:moleculeId>", methods=["GET"])
-def sample(userId, moleculeId):
-    logger.debug("User %s requested data for molecule%s", userId, moleculeId)
-    moleculeData =ics5200Engine.getMoleculeInfo(userId, moleculeId)
+@main.route("/doExperiment/<molRegNo>", methods=["GET"])
+def doExperiment(molRegNo):
+    moleculeData = ics5200Engine.doExperiment(molRegNo)
     return json.dumps(moleculeData, cls=CustomEncoder)
     
-@main.route("/smilesToSVG/<molregno>", methods=["GET"])
-def smilesToSVG(molregno):    
-    smiles = ics5200Engine.getSmiles(molregno)
+@main.route("/smilesToSVG/<molRegNo>", methods=["GET"])
+def smilesToSVG(molRegNo):    
+    smiles = ics5200Engine.getSmiles(molRegNo)
     if len(smiles) > 0:
-        logger.debug("smilesToSVG: " + smiles[0][1])
-        return ChemInfo.smilesToSVG(smiles[0][1])
+        logger.debug("smilesToSVG: " + smiles)
+        return ChemInfo.smilesToSVG(smiles)
     else:
         return ""
         
-@main.route("/testSmilesToSVG/<int:molIndex>", methods=["GET"])
-def testSmilesToSVG(molIndex):    
-    return ChemInfo.smilesToSVG(ics5200Engine.getTestSmiles(molIndex))
+@main.route("/testSmilesToSVG/<molRegNo>", methods=["GET"])
+def testSmilesToSVG(molRegNo):    
+    return ChemInfo.smilesToSVG(ics5200Engine.getTestSmiles(molRegNo))
         
 @main.route("/getTestMolRegNos", methods=["GET"])
 def getTestMolRegNos():
-    return json.dumps(ics5200Engine.getTestMolRegNos())
+    return json.dumps(ics5200Engine.getTestMolRegs())
+    
+@main.route("/getTestTargets/<molRegNo>", methods=["GET"])
+def getTestTargets(molRegNo):
+    return json.dumps(ics5200Engine.getTestTargets(molRegNo))
+    
+@main.route("/getTestDataset/", methods=["GET"])
+def getTestDataset():
+    return json.dumps(ics5200Engine.getTestDataset())
 
 def createApp(sparkContext, datasetPath):
     global ics5200Engine

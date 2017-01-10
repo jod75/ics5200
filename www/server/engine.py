@@ -54,6 +54,9 @@ class ICS5200Engine(object):
         # test data is reserved as unseen knowledge
         self.testData = dataRDD.filter(lambda t: long(t[2]) in moleculesSampleBV.value)
         
+        # this RDD will is used to get unique molecules from test data
+        self.testMoleculeData = self.testData.map(lambda t: (long(t[2]),str(t[11]))).distinct()
+        
         # sample data is the known dataset
         sampleData = dataRDD.subtract(self.testData)
         
@@ -130,15 +133,14 @@ class ICS5200Engine(object):
     def __getBindings(self, similarMolecules):
         return self.bindings.join(similarMolecules, self.bindings.molregno == similarMolecules.molregno)
         
-    def __experiment(self, experimentsData, moleculeIndex, knownMolecules, molHelper = MoleculeHelper, similarityThreshold = 0.85):
-        selectedMolecules = experimentsData.map(lambda t: (long(t[2]), t[11])).distinct().sortBy(lambda x: x[0])
-        selectedMoleculeMolRegNo = selectedMolecules.collect()[moleculeIndex][0]
-        selectedMoleculeSMILES = selectedMolecules.collect()[moleculeIndex][1]
+    def __experiment(self, experimentsData, molRegNo, knownMolecules, molHelper = MoleculeHelper, similarityThreshold = 0.85):
+        #selectedMoleculeMolRegNo = self.testMoleculeData.collect()[moleculeIndex][0]
+        selectedMoleculeSMILES = self.getTestSmiles(molRegNo)
         
-        logger.info( "MolRegNo = " + str(selectedMoleculeMolRegNo))
+        logger.info( "MolRegNo = " + str(molRegNo))
         logger.info( "SMILES = " + selectedMoleculeSMILES)
         
-        expData = experimentsData.filter(lambda t: long(t[2]) == selectedMoleculeMolRegNo).map(lambda m: m[8]).distinct().collect()
+        expData = experimentsData.filter(lambda t: long(t[2]) == molRegNo).map(lambda m: m[8]).distinct().collect()
         
         logger.info( "Target Componet IDs:")
         for compId in expData:
@@ -146,20 +148,32 @@ class ICS5200Engine(object):
         
         sm = self.__findSimilarMolecules(selectedMoleculeSMILES, knownMolecules, molHelper, similarityThreshold)
         return self.__getBindings(sm)  
-        
-    def getMoleculeInfo(self, userId, moleculeId):        
-        test = self.__experiment(self.testData, moleculeId, self.molecules, similarityThreshold = 0.5).orderBy(desc("similarity")).collect()
+     
+    # run experiment
+    def doExperiment(self, molRegNo):        
+        #test = self.__experiment(self.testData, molRegNo, self.molecules, molHelper = MoleculeMACCSHelper, similarityThreshold = 0.85).orderBy(desc("similarity")).collect()
+        test = self.__experiment(self.testData, molRegNo, self.molecules, similarityThreshold = 0.5).orderBy(desc("similarity")).collect()
         return test
         
-    def getSmiles(self, molregno):
-        return self.molecules.filter(col("molregno") == molregno).take(1)
+    # get SMILES for a molecule from Sample Data
+    def getSmiles(self, molRegNo):
+        return self.molecules.filter(col("molregno") == long(molRegNo)).take(1)[0][1]
         
-    def getTestSmiles(self, molIndex):
-        return self.testData.map(lambda t: (t[2], t[11])).distinct().collect()[molIndex][1]
+    # get SMILES for a molecule in Test Data
+    def getTestSmiles(self, molRegNo):
+        return self.testMoleculeData.filter(lambda t: t[0] == long(molRegNo)).take(1)[0][1]
         
-    def getTestMolRegNos(self):
-        x = self.testData.map(lambda t: t[2]).distinct().count()
-        return range(0, x)
+    # get a list of targets
+    def getTestTargets(self, molRegNo):        
+        return self.testData.filter(lambda t: t[2] == molRegNo).map(lambda m: m[8]).distinct().collect()
+        
+    # get a data set
+    def getTestDataset(self):        
+        return self.testData.collect()
+        
+    # get the molRegNos in Test Data
+    def getTestMolRegs(self):                
+        return self.testMoleculeData.map(lambda t: long(t[0])).collect()
 
     def __init__(self, sc, dataset_path):
         """Init the recommendation engine given a Spark context and a dataset path
