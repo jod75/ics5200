@@ -54,6 +54,11 @@ def getTestTargets(molRegNo):
 @main.route("/getTestDataset/", methods=["GET"])
 def getTestDataset():
     return json.dumps(ics5200Engine.getTestDataset())
+    
+@main.route("/doProteinExperiment/<compId>", methods=["GET"])
+def doProteinExperiment(compId):
+    proteinData = ics5200Engine.doProteinExperiment(compId)
+    return json.dumps(proteinData, cls=CustomEncoder)
 
 def createApp(sparkContext, datasetPath):
     global ics5200Engine

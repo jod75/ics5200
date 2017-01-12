@@ -1,6 +1,7 @@
 #!/bin/bash
 
 cd ~
+hdfs dfsadmin -safemode enter
 $SPARK_HOME/sbin/stop-all.sh
 
 $HADOOP_HOME/sbin/stop-yarn.sh

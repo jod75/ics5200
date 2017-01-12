@@ -11,6 +11,9 @@ from rdkit.Chem import AllChem
 from rdkit import DataStructs
 from rdkit.Chem import MACCSkeys
 
+from Bio.Blast.Applications import NcbiblastxCommandline
+from Bio.Blast import NCBIXML
+
 from moleculehelper import *
 from chemblhelper import ChEMBLHelper
 from pythonhelper import *
@@ -19,6 +22,10 @@ from hdfshelper import HDFSHelper
 import os.path
 import logging
 import json
+import subprocess
+import shutil
+import shlex
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +39,9 @@ class ICS5200Engine(object):
         datasetCount = 100000                                        # dataset count of bindings from ChEMBL
         datasetTSVFilename = "sample" + str(datasetCount) + ".tsv"   # file with sample data
         hdfsDatasetFilename = os.path.join("/user/hduser", datasetTSVFilename)
+        sparkFastaFile = "/home/hduser/Lab/chembl"+ str(datasetCount) +".fasta" # file created by spark task
+        self.localFasta = "/home/hduser/Lab/proteinbank/chembl" + str(datasetCount) + ".fasta"
+        self.blastOutFile = "/home/hduser/Lab/blastResult.xml"
 
         # check if the dataset file exists in hdfs and if it does not, then load data from ChEMBL database
         if not HDFSHelper.fileExists(hdfsServer, hdfsDatasetFilename):
@@ -105,6 +115,31 @@ class ICS5200Engine(object):
 
         # convert RDD to DataFrame - faster and more memory efficient
         self.proteins = self.sqlContext.createDataFrame(proteinsRDD, proteinsSchema)
+        
+        # create BLAST local db
+        # clean up before saving file to disk
+        if not os.path.exists(self.localFasta):            
+            shutil.rmtree(sparkFastaFile, ignore_errors=True)
+            # manipulate raw data rdd and create FASTA file
+            sampleData.map(lambda line: (line[9], line[10])) \
+                        .distinct() \
+                        .map(lambda t: str(">ebl|" + t[0] + "|\r" + "\r".join(re.findall(".{1,80}",t[1])))) \
+                        .coalesce(1) \
+                        .saveAsTextFile("file://" + sparkFastaFile)
+            os.rename(os.path.join(sparkFastaFile, "part-00000"), self.localFasta)
+            
+            # create local blast db
+            process = subprocess.Popen(shlex.split("makeblastdb -in %s -parse_seqids -dbtype prot" % os.path.basename(self.localFasta)),                           
+                                       stdout = subprocess.PIPE,
+                                       stderr = subprocess.PIPE,  
+                                       cwd = os.path.dirname(self.localFasta),
+                                       shell = False)
+
+            out, err = process.communicate()
+
+            PythonHelper.writeToJupyterConsole(">Engine init makeblastdb out: " + out)
+            PythonHelper.writeToJupyterConsole(">Engine init makeblastdb err: " + err)
+        
 
     # this must run on the main thread
     def __findSimilarMolecules(self, querySmiles, knownMolecules, molHelper = MoleculeHelper, similarityThreshold = 0.85):
@@ -150,30 +185,117 @@ class ICS5200Engine(object):
         return self.__getBindings(sm)  
      
     # run experiment
-    def doExperiment(self, molRegNo):        
+    def doExperiment(self, molRegNo):
+        """ Search for molecules similar to molRegNo.
+            
+            Args:
+                molRegNo: The molRegNo in ChEMBL database for a molecule in test data set.
+                
+            Returns:
+                List: An RDD with similar molecules and their bindings.
+        """      
+        
         #test = self.__experiment(self.testData, molRegNo, self.molecules, molHelper = MoleculeMACCSHelper, similarityThreshold = 0.85).orderBy(desc("similarity")).collect()
         test = self.__experiment(self.testData, molRegNo, self.molecules, similarityThreshold = 0.5).orderBy(desc("similarity")).collect()
         return test
         
     # get SMILES for a molecule from Sample Data
     def getSmiles(self, molRegNo):
+        """ Get SMILES for a molecule in Sample data set.
+        
+            Args:
+                molRegNo: The molRegNo in ChEMBL database for a molecule in Sample data set for which SMILES string sequence is required.
+                
+            Returns:
+                String: Canonical SMILES representation.
+        """
+        
         return self.molecules.filter(col("molregno") == long(molRegNo)).take(1)[0][1]
         
     # get SMILES for a molecule in Test Data
     def getTestSmiles(self, molRegNo):
+        """  Get SMILES for a molecule in Test data set.
+        
+            Args:
+                molRegNo: The molRegNo in ChEMBL database for a molecule in Test data set for which SMILES string sequence is required.
+                
+            Returns:
+                String: Canonical SMILES representation.
+        """
+        
         return self.testMoleculeData.filter(lambda t: t[0] == long(molRegNo)).take(1)[0][1]
         
     # get a list of targets
-    def getTestTargets(self, molRegNo):        
+    def getTestTargets(self, molRegNo):  
+        """  Get list of compound target id for a molecule in Test data set.
+        
+            Args:
+                molRegNo: The molRegNo in ChEMBL database for a molecule in Test data set for which targets list is required.
+                
+            Returns:
+                List: Compound target ids.
+        """
+        
         return self.testData.filter(lambda t: t[2] == molRegNo).map(lambda m: m[8]).distinct().collect()
         
     # get a data set
-    def getTestDataset(self):        
+    def getTestDataset(self):  
+        """ Gets all data in Test data set.
+        
+            Returns:
+                List: All data in test data set.
+        """
+        
         return self.testData.collect()
         
     # get the molRegNos in Test Data
-    def getTestMolRegs(self):                
+    def getTestMolRegs(self):
+        """ Gets list of molRegNos in test data set.
+        
+            Returns:
+                List: molRegNos in test data.
+        """
+        
         return self.testMoleculeData.map(lambda t: long(t[0])).collect()
+        
+    def doProteinExperiment(self, compId):
+        query_seq = self.testData.filter(lambda t: t[8] == compId).distinct().map(lambda m: m[10]).collect()[0]
+        blastp_cline = NcbiblastxCommandline(cmd = "blastp",
+                                     db = self.localFasta,
+                                     evalue = 0.01,
+                                     outfmt = 5,
+                                     remote = False,
+                                     out = self.blastOutFile)
+
+        (out, err) = blastp_cline(stdin = query_seq)
+        PythonHelper.writeToJupyterConsole(">Engine doProteinExperiment out: " + out)
+        PythonHelper.writeToJupyterConsole(">Engine doProteinExperiment err: " + err)
+        
+        # create matching proteins list.
+        # each list entry is a tuple in the format:
+        #  (Accession, (Hit, High-Scoring-Pair expect value))
+        #  nested tuples are needed to join rdds
+        result_handle = open(self.blastOutFile)
+        blast_record = NCBIXML.read(result_handle)
+        matches = []
+        for alignment in blast_record.alignments:   
+            i = 1
+            for hsp in alignment.hsps:
+                matches.append((alignment.accession, (i, hsp.expect)))
+                i = i + 1 
+        
+        sm = self.sc.parallelize(matches)       
+        uniqueAccessions = sm.map(lambda t: t[0]).distinct().collect()
+        # this must work on dataframe not RDD
+        accessionsCompId = self.proteins.rdd.filter(lambda t: t[1] in uniqueAccessions).map(lambda p: (p[1], p[0])).distinct()
+        simSchema = StructType([StructField("accession", StringType(), False),
+                                StructField("hit", IntegerType(), False),
+                                StructField("similarity", FloatType(), False),
+                                StructField("compId", LongType(), False)])
+
+        sim = self.sqlContext.createDataFrame(sm.join(accessionsCompId).map(lambda t: (t[0], t[1][0][0], t[1][0][1], long(t[1][1]))), simSchema)        
+        return self.bindings.join(sim, self.bindings.component_id == sim.compId).collect()
+        
 
     def __init__(self, sc, dataset_path):
         """Init the recommendation engine given a Spark context and a dataset path
