@@ -1,64 +1,46 @@
 $(document).ready(function () {
-	var molSimTable = $('#moleculeSimilarityTable').DataTable();
+	var molSimTable = $('#ligandSimilarityTable').DataTable();
     var protSimTable = $('#proteinSimilarityTable').DataTable();
-    var testDataTable = $('#testdataTable').DataTable();
+    var testLigandDataTable = $('#testLigandDataTable').DataTable();
+    var testProteinDataTable = $('#testProteinDataTable').DataTable();
     
-    $("#tabs").tabs();
- 
-    // fill dropdown list
-    $.ajax({
-        url: "http://hadoop1:5432/getTestMolRegNos",
-        type: "get",
-        datatype: "json",
-        success: function (response) {
-            mols = JSON.parse(response)
-            // fill drop down
-            var dropdown = $("#testMolecules");
-            dropdown.empty(); 
-            for (var i = 0; i < mols.length; i++) {
-                dropdown.append("<option>" + mols[i] + "</option>");
-            }          
-        }
-    });
+    $("#tabs").tabs();    
     
     // populate test data table
     $.ajax({
-        url: "http://hadoop1:5432/getTestDataset",
+        url: "http://hadoop1:5432/getTestLigandsDS",
         type: "get",
         datatype: "json",
         success: function (response) {
             res = JSON.parse(response);
-            testDataTable.rows().clear();   
-            testDataTable.column(0).visible(false);            
-            testDataTable.rows.add(res).draw();  
+            testLigandDataTable.rows().clear();   
+            testLigandDataTable.column(0).visible(false);            
+            testLigandDataTable.rows.add(res).draw();  
         }
     });
     
-    // binds to tab events
-    $('#tabs').bind('tabsactivate', function(event, ui) { 
-      switch (ui.newPanel[0].id){
-        case "tabs-1": 
-            console.log("0")
-            break;
-        case "tabs-2": 
-            console.log("1")
-            break;
-        case "tabs-3": 
-            console.log("2")
-            break;
-      }
+    $.ajax({
+        url: "http://hadoop1:5432/getTestProteinsDS",
+        type: "get",
+        datatype: "json",
+        success: function (response) {
+            res = JSON.parse(response);
+            testProteinDataTable.rows().clear();   
+            testProteinDataTable.column(0).visible(false);            
+            testProteinDataTable.rows.add(res).draw();  
+        }
     });
- 
-	$('#moleculeSimilarityTable tbody').on('click', 'tr', function () {
+     
+	$('#ligandSimilarityTable tbody').on('click', 'tr', function () {
         if (molSimTable.row(this).length > 0) {
             console.log( 'Row index: ' + molSimTable.row(this).index() );
-            document.getElementById('selectedExperimentMolecule').innerText = molSimTable.row(this).data()[2]; 
+            document.getElementById('knownLigandMolRegNo').innerText = molSimTable.row(this).data()[2]; 
             $.ajax({
-                url: "http://hadoop1:5432/smilesToSVG/" + molSimTable.row(this).data()[2],
+                url: "http://hadoop1:5432/getSmilesSVG/" + molSimTable.row(this).data()[2],
                 type: "get",
                 datatype: "json",
                 success: function(response) {                    
-                    document.getElementById('molecule').innerHTML = response                    
+                    document.getElementById('knownLigandSVG').innerHTML = response                    
                 }
             });
         }
@@ -71,32 +53,77 @@ $(document).ready(function () {
         }
 	} );
     
-    $('#testdataTable tbody').on('click', 'tr', function () {
-        if (testDataTable.row(this).length > 0) { 
-            document.getElementById("selectedTestMolecule").innerText = testDataTable.row(this).data()[2];
+    $('#testLigandDataTable tbody').on('click', 'tr', function () {
+        if (testLigandDataTable.row(this).length > 0) { 
+            var molRegNo = testLigandDataTable.row(this).data()[2];
+            document.getElementById("testLigandMolRegNo").innerText = molRegNo;
             $.ajax({
-                url: "http://hadoop1:5432/testSmilesToSVG/" + testDataTable.row(this).data()[2],
+                url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
                 type: "get",
                 datatype: "json",
                 success: function(response) {                    
-                    document.getElementById('testmolecule').innerHTML = response                    
+                    document.getElementById('testLigandSVG').innerHTML = response                    
                 }
+            });
+
+            $.ajax({
+            url: "http://hadoop1:5432/getLigandTestTargets/" + molRegNo,
+            type: "get",
+            datatype: "json",
+            success: function(response) {  
+                var testLigandBindings = document.getElementById("testLigandBindings")              
+                testLigandBindings.innerHTML = "<ul>"
+                targets = JSON.parse(response)
+                for (var i = 0; i < targets.length; i++) {
+                    testLigandBindings.innerHTML += ("<li><samp>" + targets[i] + "</samp></li>");
+                }   
+                testLigandBindings.innerHTML += ("</ul>");
+            }
             });
         }
 	} );
     
-    $('#testdataTable tbody').on('dblclick', 'tr', function () {
-        if (testDataTable.row(this).length > 0) {   
-            var molreg = testDataTable.row(this).data()[2]
-            document.getElementById('queryProtein').innerText = testDataTable.row(this).data()[8]
-            var dd = document.getElementById('testMolecules');
-            for (var i = 0; i < dd.options.length; i++) {
-                if (dd.options[i].text === molreg) {
-                    dd.selectedIndex = i;
-                    break;
+    $('#testLigandDataTable tbody').on('dblclick', 'tr', function () {
+        if (testLigandDataTable.row(this).length > 0) {   
+            var molRegNo = testLigandDataTable.row(this).data()[2]
+            document.getElementById("queryLigandMolRegNo").innerText = molRegNo;
+            $.ajax({
+                url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
+                type: "get",
+                datatype: "json",
+                success: function(response) {                    
+                    document.getElementById('queryLigandSVG').innerHTML = response                    
                 }
-            }            
-            $("#userQueryButton").click();
+            });
+
+            $.ajax({
+            url: "http://hadoop1:5432/getLigandTestTargets/" + molRegNo,
+            type: "get",
+            datatype: "json",
+            success: function(response) {  
+                var queryLigandMolRegNo = document.getElementById("queryLigandMolRegNo")              
+                queryLigandMolRegNo.innerText = molRegNo + " ( "
+                targets = JSON.parse(response)
+                for (var i = 0; i < targets.length; i++) {
+                    queryLigandMolRegNo.innerText += (targets[i] + " ");
+                }   
+                queryLigandMolRegNo.innerText += ")";
+            }
+            });
+
+            $.ajax({
+			url: "http://hadoop1:5432/doLigandExperiment/" + molRegNo,
+			type: "get",
+			datatype: "json",			
+			success: function (response) {				
+				res = JSON.parse(response);
+                molSimTable.rows().clear();
+                molSimTable.column(0).visible(false);
+                molSimTable.column(9).visible(false);
+				molSimTable.rows.add(res).draw();
+                $('#tabs').tabs({ active: 2 });
+			}
+		    });
         }
 	} );
 		
@@ -109,33 +136,8 @@ $(document).ready(function () {
                 document.getElementById('queryMolecule').innerHTML = response       
                 document.getElementById('molecule').innerHTML = ""              
             }
-        });
-        $.ajax({
-            url: "http://hadoop1:5432/getTestTargets/" + $("#testMolecules").val(),
-            type: "get",
-            datatype: "json",
-            success: function(response) {                    
-                document.getElementById('targets').innerHTML = "<ul>"
-                targets = JSON.parse(response)
-                for (var i = 0; i < targets.length; i++) {
-                    document.getElementById('targets').innerHTML += ("<li>" + targets[i] + "</li>");
-                }   
-                document.getElementById('targets').innerHTML += ("</ul>");
-            }
-        });
-		$.ajax({
-			url: "http://hadoop1:5432/doExperiment/" + $("#testMolecules").val(),
-			type: "get",
-			datatype: "json",			
-			success: function (response) {				
-				res = JSON.parse(response);
-                molSimTable.rows().clear();
-                molSimTable.column(0).visible(false);
-                molSimTable.column(9).visible(false);
-				molSimTable.rows.add(res).draw();
-                $('#tabs').tabs({ active: 2 });
-			}
-		});
+        });        
+		
         $.ajax({
 			url: "http://hadoop1:5432/doProteinExperiment/" + document.getElementById('queryProtein').innerText,
 			type: "get",

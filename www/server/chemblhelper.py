@@ -10,6 +10,8 @@
 import mysql.connector
 from mysql.connector import errorcode
 from pythonhelper import *
+from hdfshelper import HDFSHelper
+import os.path
 
 
 # In[ ]:
@@ -36,7 +38,22 @@ class ChEMBLHelper:
               'raise_on_warnings': False,
             }
         else:
-            self.__config = config            
+            self.__config = config  
+            
+    def createDataBank(self, hdfsServer, localLocation, hdfsLocation, datasetCount = 100):
+        # get small dataset from ChEMBL
+        datasetTSVFilename = "sample" + str(datasetCount) + ".tsv"
+        datasetTSVPath = os.path.join(localLocation, datasetTSVFilename)
+        hdfsDatasetFilename = os.path.join(hdfsLocation, datasetTSVFilename)
+
+        # check if the dataset file exists in hdfs and if it does not, then load data from ChEMBL database
+        if not HDFSHelper.fileExists(hdfsServer, hdfsDatasetFilename):
+            # get data from ChEMBL and stores the file to local dfs
+            self.saveBindingsToTSV(datasetTSVPath, datasetCount) 
+            # upload data to hdfs so that it is accessbile from all cluster worker nodes
+            HDFSHelper.putFile(hdfsServer, datasetTSVPath, hdfsDatasetFilename)
+            
+        return hdfsDatasetFilename
         
     def getMolecules(self, limit):
         """ Gets a number (limit) of molecule related data and stores it in a dictionary.  The dictionary key is the MOLREGNO.
@@ -175,7 +192,8 @@ class ChEMBLHelper:
                 filename: the tsv filename where to save the data.  The columns are in this order:
                     <row_id, assay_id, molrgeno, standard_relation, standard_value, 
                      standard_units, standard_type, pchembl_value, componend_id, 
-                     accession, sequence, canonical_smiles>
+                     accession, sequence, canonical_smiles, mol_pref_name, prot_pref_name, 
+                     prot_short_name>
                 limit: the number of bindings to return.
         """
         # create a custom table with all our needed data
@@ -199,7 +217,7 @@ class ChEMBLHelper:
                      "     standard_relation, CAST(standard_value as DECIMAL(38,30)), " +
                      "     standard_units, standard_type, " +
                      "     CAST(pchembl_value as DECIMAL(38,30)), component_id, " +
-                     "     accession, sequence, canonical_smiles "+
+                     "     accession, sequence, canonical_smiles, mol_pref_name, prot_pref_name, short_name "+
                      "FROM binding " +                     
                      "ORDER BY row_id " +
                      limitClause + ";")            
@@ -215,12 +233,13 @@ class ChEMBLHelper:
                     cursor.execute(query, {"pageoffset":i * pagesize})                
                     rowsRead = False # need to track if there were any rows in resultset due to non buffered cursor mode                 
                     for (row_id, assay_id, molregno, std_relation, std_value, std_units, std_type,
-                         pchembl_value, component_id, accession, sequence, canonical_smiles) in cursor:
+                         pchembl_value, component_id, accession, sequence, canonical_smiles,
+                         mol_pref_name, prot_pref_name, prot_short_name) in cursor:
                         # as per os.linesp - use \n for terminator on all platforms
-                        tsv.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % 
+                        tsv.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % 
                                   (row_id, assay_id, molregno, std_relation, std_value, std_units,
                                    std_type, pchembl_value, component_id, accession, 
-                                   sequence, canonical_smiles))
+                                   sequence, canonical_smiles, mol_pref_name, prot_pref_name, prot_short_name))
                         if not rowsRead:   #checking a flag must be faster than setting it <- confirm this?!
                             rowsRead = True                
                     i = i + 1
@@ -230,10 +249,13 @@ class ChEMBLHelper:
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                 print("Something is wrong with your user name or password")
+                raise
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 print("Database does not exist")
+                raise
             else:
                 print(err)
+                raise
         else:
             cnx.close()            
     
@@ -251,23 +273,32 @@ class ChEMBLHelper:
                 "     act.standard_relation, act.standard_value, " +
                 "     act.standard_units, act.standard_type, " +
                 "     act.pchembl_value, tc.component_id, " +
-                "     cs.accession, cs.sequence, cps.canonical_smiles "+
+                "     cs.accession, cs.sequence, cps.canonical_smiles, "+
+                "     md.pref_name AS mol_pref_name, pc.pref_name AS prot_pref_name," +
+                "     pc.short_name " +
                 "FROM (select @rownum := 0) r, activities act, assays asy,  " +
                 "     target_components tc, component_sequences cs, " +
-                "     compound_structures cps " +
+                "     compound_structures cps, molecule_dictionary md, " +
+                "     component_class cc, protein_classification pc " +
                 "WHERE act.assay_id = asy.assay_id AND " +
                 "      asy.tid = tc.tid AND tc.component_id = cs.component_id AND "+ 
-                "      asy.assay_tax_id = 9606 AND act.molregno = cps.molregno;")                 
+                "      cs.component_id = cc.component_id AND " +
+                "      cc.protein_class_id = pc.protein_class_id AND " +
+                "      asy.assay_tax_id = 9606 AND act.molregno = md.molregno AND " +
+                "      md.molregno = cps.molregno;")
             
             cursor.execute(mysqlCreateBindingTable)            
 
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
                 print("Something is wrong with your user name or password")
+                raise
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 print("Database does not exist")
+                raise
             else:
                 print(err)
+                raise
         else:
             cnx.close()
 

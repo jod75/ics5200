@@ -23,19 +23,29 @@
                 <div id="tabs">
                   <ul>
                     <li><a href="#tabs-1">Query settings</a></li>
-                    <li><a href="#tabs-2">Test Data</a></li>
-                    <li><a href="#tabs-3">Molecule Similarity Experiment</a></li>
-                    <li><a href="#tabs-4">Protein Similarity Experiment</a></li>
+                    <li><a href="#tabs-2">Test Data (Ligands)</a></li>
+                    <li><a href="#tabs-3">Ligands Similarity Experiment</a></li>
+                    <li><a href="#tabs-4">Test Data (Proteins)</a></li>
+                    <li><a href="#tabs-5">Proteins Similarity Experiment</a></li>
                   </ul>
                   <div id="tabs-1">
 
                   </div>
                   <div id="tabs-2">
-                    <table id="t01">
+                    <!-- Ligand test table -->
+                    <table>
                         <tr>
-                            <td>Selected molecule:<div id="selectedTestMolecule"></div><br/><div id="testmolecule"></div></td>
                             <td>
-                            <table id="testdataTable" class="display" cellspacing="0" width="70%">
+                                Selected ligand:
+                                <div><samp><span id="testLigandMolRegNo"></span></samp></div>
+                                <br/>
+                                <div id="testLigandSVG"></div>
+                                <br/>
+                                Binds with components:
+                                <div id="testLigandBindings"></div>
+                            </td>
+                            <td>
+                            <table id="testLigandDataTable" class="display" cellspacing="0" width="100%">
                             <thead>
                                 <tr>
                                     <th>Row ID</th>
@@ -55,25 +65,67 @@
                     </table>
                   </div>
                   <div id="tabs-3">
-                    <table id="moleculeSimilarityTable" class="display" cellspacing="0" width="70%">
-                        <thead>
-                            <tr>
-                                <th>Row ID</th>
-                                <th>Assay ID</th>
-                                <th>Mol Reg No</th>
-                                <th>Std Relation</th>
-                                <th>Std Value</th>
-                                <th>Std Units</th>
-                                <th>Std Type</th>
-                                <th>pChEMBL Value</th>
-                                <th>Component ID</th>
-                                <th>Mol Reg No</th>
-                                <th>Similarity</th>
-                            </tr>
-                        </thead>
-                    </table>
+                    <!-- Ligand result table -->
+                    <table>
+                        <tr>
+                            <td>
+                                Query ligand:
+                                <div><samp><span id="queryLigandMolRegNo"></span></samp></div>
+                                <br/>
+                                <div id="queryLigandSVG"></div>
+                                <br/>
+                                Selected ligand:
+                                <div><samp><span id="knownLigandMolRegNo"></span></samp></div>
+                                <div id="knownLigandSVG"></div>
+                            </td>
+                            <td>
+                                <table id="ligandSimilarityTable" class="display" cellspacing="0" width="70%">
+                                <thead>
+                                <tr>
+                                    <th>Row ID</th>
+                                    <th>Assay ID</th>
+                                    <th>Mol Reg No</th>
+                                    <th>Std Relation</th>
+                                    <th>Std Value</th>
+                                    <th>Std Units</th>
+                                    <th>Std Type</th>
+                                    <th>pChEMBL Value</th>
+                                    <th>Component ID</th>
+                                    <th>Mol Reg No</th>
+                                    <th>Similarity</th>
+                                </tr>
+                                </thead>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>                    
                   </div>
                   <div id="tabs-4">
+                    <!-- Protein test table -->
+                    <table>
+                        <tr>
+                            <td>Selected protein:<div id="selectedTestProtein"></div><br/><div id="testProtein"></div></td>
+                            <td>
+                            <table id="testProteinDataTable" class="display" cellspacing="0" width="70%">
+                            <thead>
+                                <tr>
+                                    <th>Row ID</th>
+                                    <th>Assay ID</th>
+                                    <th>Mol Reg No</th>
+                                    <th>Std Relation</th>
+                                    <th>Std Value</th>
+                                    <th>Std Units</th>
+                                    <th>Std Type</th>
+                                    <th>pChEMBL Value</th>
+                                    <th>Component ID</th>
+                                </tr>
+                            </thead>
+                            </table>
+                            </td>
+                        </tr>
+                    </table>
+                  </div>
+                  <div id="tabs-5">
                     <!-- Protein result table -->
                     <table id="proteinSimilarityTable" class="display" cellspacing="0" width="70%">
                         <thead>
@@ -104,24 +156,9 @@
 			</div>
 		</div>
 
-		<div class="left" id="molecule-display">
+		<div class="left">
 		  <br />
-          <div class="lefttext">Test molecules: <select id="testMolecules">
-            <option>Loading...</option></select>
-          </div>
-		  <div>
-			<button id="userQueryButton">Search</button>
-		  </div>
-		  <br/>
-          <div class="lefttext">Query Protein:<span id="queryProtein">-</span></div>
-		  <br/>
-          <div id="queryMolecule"></div>
-          <div class="lefttext"><span>Test Target ID(s):</span><br/>
-            <span class="lefttext" id="targets">-</span>
-          </div>
-          <br/>
-		  <div id="molecule"></div>
-          <div class="lefttext" id="selectedExperimentMolecule"></div>
+          <div class="lefttext">Data:</div>          
 		</div>
 
 		<div class="footer">
