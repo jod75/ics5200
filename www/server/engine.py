@@ -59,10 +59,10 @@ class ICS5200Engine(object):
         moleculesSample = dataRDD.map(lambda t: long(t[2])).distinct().sample(withReplacement=False, seed=1, fraction=0.01)
         
         # broadcast value as a list of lonf numbers so that mapping is faster
-        moleculesSampleBV = self.sc.broadcast(moleculesSample.collect())
+        self.moleculesSampleBV = self.sc.broadcast(moleculesSample.collect())
         
         # test data is reserved as unseen knowledge
-        self.testData = dataRDD.filter(lambda t: long(t[2]) in moleculesSampleBV.value)
+        self.testData = dataRDD.filter(lambda t: long(t[2]) in self.moleculesSampleBV.value)
         
         # this RDD will is used to get unique molecules from test data
         self.testMoleculeData = self.testData.map(lambda t: (long(t[2]),str(t[11]))).distinct()
@@ -273,7 +273,7 @@ class ICS5200Engine(object):
         
         # create matching proteins list.
         # each list entry is a tuple in the format:
-        #  (Accession, (Hit, High-Scoring-Pair expect value))
+        #  (Accession, (Hit, High-Scoring-Pair expect value, hsp))
         #  nested tuples are needed to join rdds
         result_handle = open(self.blastOutFile)
         blast_record = NCBIXML.read(result_handle)
@@ -281,7 +281,7 @@ class ICS5200Engine(object):
         for alignment in blast_record.alignments:   
             i = 1
             for hsp in alignment.hsps:
-                matches.append((alignment.accession, (i, hsp.expect)))
+                matches.append((alignment.accession, (i, hsp.expect, str(hsp))))
                 i = i + 1 
         
         sm = self.sc.parallelize(matches)       
@@ -291,9 +291,10 @@ class ICS5200Engine(object):
         simSchema = StructType([StructField("accession", StringType(), False),
                                 StructField("hit", IntegerType(), False),
                                 StructField("similarity", FloatType(), False),
-                                StructField("compId", LongType(), False)])
+                                StructField("compId", LongType(), False),
+                                StructField("hsp", StringType(), False)])
 
-        sim = self.sqlContext.createDataFrame(sm.join(accessionsCompId).map(lambda t: (t[0], t[1][0][0], t[1][0][1], long(t[1][1]))), simSchema)        
+        sim = self.sqlContext.createDataFrame(sm.join(accessionsCompId).map(lambda t: (t[0], t[1][0][0], t[1][0][1], long(t[1][1]), t[1][0][2])), simSchema)        
         return self.bindings.join(sim, self.bindings.component_id == sim.compId).collect()
         
 

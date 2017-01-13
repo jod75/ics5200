@@ -64,6 +64,13 @@ $(document).ready(function () {
         }
 	} );
     
+    $('#proteinSimilarityTable tbody').on('click', 'tr', function () {
+        if (protSimTable.row(this).length > 0) {
+            console.log( 'Row index: ' + protSimTable.row(this).index() );
+            document.getElementById('proteinAlignment').innerText =  protSimTable.row(this).data()[13].replace(/ /g, '\u00a0') 
+        }
+	} );
+    
     $('#testdataTable tbody').on('click', 'tr', function () {
         if (testDataTable.row(this).length > 0) { 
             document.getElementById("selectedTestMolecule").innerText = testDataTable.row(this).data()[2];
@@ -94,7 +101,7 @@ $(document).ready(function () {
 	} );
 		
 	$("#userQueryButton").click(function () {		
-        /*$.ajax({
+        $.ajax({
             url: "http://hadoop1:5432/testSmilesToSVG/" + $("#testMolecules").val(),
             type: "get",
             datatype: "json",
@@ -128,7 +135,7 @@ $(document).ready(function () {
 				molSimTable.rows.add(res).draw();
                 $('#tabs').tabs({ active: 2 });
 			}
-		});*/
+		});
         $.ajax({
 			url: "http://hadoop1:5432/doProteinExperiment/" + document.getElementById('queryProtein').innerText,
 			type: "get",
@@ -137,10 +144,10 @@ $(document).ready(function () {
 				res = JSON.parse(response);
                 protSimTable.rows().clear();
                 protSimTable.column(0).visible(false);
-                protSimTable.column(9).visible(false);
                 protSimTable.column(12).visible(false);
+                protSimTable.column(13).visible(false);
 				protSimTable.rows.add(res).draw();
-                $('#tabs').tabs({ active: 2 });
+                $('#tabs').tabs({ active: 3 });
 			}
 		});
 	});
