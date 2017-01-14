@@ -48,15 +48,14 @@
                             <table id="testLigandDataTable" class="display" cellspacing="0" width="100%">
                             <thead>
                                 <tr>
-                                    <th>Row ID</th>
-                                    <th>Assay ID</th>
-                                    <th>Mol Reg No</th>
                                     <th>Std Relation</th>
                                     <th>Std Value</th>
                                     <th>Std Units</th>
                                     <th>Std Type</th>
                                     <th>pChEMBL Value</th>
                                     <th>Component ID</th>
+                                    <th>Mol Reg No</th>
+                                    <th>Ligand Pref Name</th>
                                 </tr>
                             </thead>
                             </table>
@@ -68,20 +67,24 @@
                     <!-- Ligand result table -->
                     <table>
                         <tr>
-                            <td>
-                                Query ligand:
-                                <div><samp><span id="queryLigandMolRegNo"></span></samp></div>
+                            <td>Query ligand:
+                                <div><samp><span id="queryLigandMolRegNo">-</span></samp></div>
                                 <br/>
                                 <div id="queryLigandSVG"></div>
                                 <br/>
+                                Unique Component IDs found:
+                                <div><samp><span id="knownLigandsUniqueCompId">-</span></samp></div>
+                                <br/>
                                 Selected ligand:
-                                <div><samp><span id="knownLigandMolRegNo"></span></samp></div>
+                                <div><samp><span id="knownLigandMolRegNo">-</span></samp></div>
                                 <div id="knownLigandSVG"></div>
                             </td>
                             <td>
-                                <table id="ligandSimilarityTable" class="display" cellspacing="0" width="70%">
+                                <table id="ligandSimilarityTable" class="display" cellspacing="0" width="100%">
                                 <thead>
                                 <tr>
+                                    <th>Mol Reg No</th>
+                                    <th>Similarity</th>
                                     <th>Row ID</th>
                                     <th>Assay ID</th>
                                     <th>Mol Reg No</th>
@@ -91,8 +94,6 @@
                                     <th>Std Type</th>
                                     <th>pChEMBL Value</th>
                                     <th>Component ID</th>
-                                    <th>Mol Reg No</th>
-                                    <th>Similarity</th>
                                 </tr>
                                 </thead>
                                 </table>
@@ -104,20 +105,25 @@
                     <!-- Protein test table -->
                     <table>
                         <tr>
-                            <td>Selected protein:<div id="selectedTestProtein"></div><br/><div id="testProtein"></div></td>
-                            <td>
-                            <table id="testProteinDataTable" class="display" cellspacing="0" width="70%">
+                            <td>Selected protein:
+                                <div id="selectedTestProtein"></div>                                
+                                <br/>                                
+                                Binds with ligands:
+                                <div id="testProteinBindings">-</div>
+                            </td>
+                            <td>                                
+                            <table id="testProteinDataTable" class="display" cellspacing="0" width="100%">
                             <thead>
-                                <tr>
-                                    <th>Row ID</th>
-                                    <th>Assay ID</th>
+                                <tr>                                    
                                     <th>Mol Reg No</th>
                                     <th>Std Relation</th>
                                     <th>Std Value</th>
                                     <th>Std Units</th>
                                     <th>Std Type</th>
                                     <th>pChEMBL Value</th>
-                                    <th>Component ID</th>
+                                    <th>Component ID</th>                                    
+                                    <th>Accession</th>                                    
+                                    <th>Short Name</th>
                                 </tr>
                             </thead>
                             </table>
@@ -127,7 +133,7 @@
                   </div>
                   <div id="tabs-5">
                     <!-- Protein result table -->
-                    <table id="proteinSimilarityTable" class="display" cellspacing="0" width="70%">
+                    <table id="proteinSimilarityTable" class="display" cellspacing="0" width="100%">
                         <thead>
                             <tr>
                                 <th>Row ID</th>

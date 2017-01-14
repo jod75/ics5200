@@ -69,12 +69,12 @@ class ICS5200Engine(object):
                                                             datasetCount)
 
         # Step 2 and 3 - Sampling
-        self.__sampleData(0.01, 1) # 1% used for testing
+        self.__sampleData(0.01, 0.05, 1) # 1% used for testing
 
         # Step 4 - Create Blast DB
         self.__createLocalBlastDb()
 
-    def __sampleData(self, testPercentage=0.01, seeding=None):
+    def __sampleData(self, ligandTestPercentage=0.01, proteinTestPercentage=0.05, seeding=None):
         """  Splits raw data into test and known sets
         """
         # dataRDD will contain all data imported from MySQL
@@ -86,13 +86,16 @@ class ICS5200Engine(object):
 
         ### unique lists
         # Ligands - molRergNo
-        testLigandsList = dataRDD.map(lambda t: long(t[2])).distinct().sample(withReplacement=False, seed=seeding, fraction=testPercentage)
-        # Proteins - compId (which is long rather than accession, which is a string)
-        testProteinsList = dataRDD.map(lambda t: long(t[8])).distinct().sample(withReplacement=False, seed=seeding, fraction=testPercentage)
-
+        testLigandsList = dataRDD.map(lambda t: long(t[2])).distinct().sample(withReplacement=False, seed=seeding, fraction=ligandTestPercentage)
         # broadcast value as a list of lonf numbers so that mapping is faster
         testLigandsListBV = self.sc.broadcast(testLigandsList.collect())
+        PythonHelper.writeToJupyterConsole(">Engine init testLigandsListBV: " + str(len(testLigandsListBV.value)))
+
+        # Proteins - compId (which is long rather than accession, which is a string)
+        testProteinsList = dataRDD.map(lambda t: long(t[8])).distinct().sample(withReplacement=False, seed=seeding, fraction=proteinTestPercentage)
         testProteinsListBV = self.sc.broadcast(testProteinsList.collect())
+        PythonHelper.writeToJupyterConsole(">Engine init testProteinsListBV: " + str(len(testProteinsListBV.value)))
+
 
         ### samples
         # Test sets
@@ -105,11 +108,11 @@ class ICS5200Engine(object):
 
         ### DataFrames
         # Schemas
-        ligandsSchema = StructType([StructField("molregno", IntegerType(), False),
+        ligandsSchema = StructType([StructField("mol_reg_no", IntegerType(), False),
                                     StructField("canonical_smiles", StringType(), False),
                                     StructField("mol_pref_name", StringType(), True)])
 
-        proteinsSchema = StructType([StructField("component_id", LongType(), False),
+        proteinsSchema = StructType([StructField("comp_id", LongType(), False),
                                      StructField("accession", StringType(), True),
                                      StructField("sequence", StringType(), False),
                                      StructField("prot_pref_name", StringType(), True),
@@ -188,7 +191,7 @@ class ICS5200Engine(object):
         # manipulate raw data rdd and create FASTA file
         blastDb = self.proteinsBindingsKnown \
                     .join(self.proteins,
-                          self.proteinsBindingsKnown.component_id == self.proteins.component_id) \
+                          self.proteinsBindingsKnown.component_id == self.proteins.comp_id) \
                     .select("accession", "prot_pref_name", "sequence") \
                     .distinct() \
                     .rdd \
@@ -213,10 +216,12 @@ class ICS5200Engine(object):
         PythonHelper.writeToJupyterConsole(">Engine init makeblastdb err: " + err)
 
     def getTestLigandsDS(self):
-        return self.ligandsBindingsTest.collect()
+        fullTestLigandsDF = self.ligandsBindingsTest.join(self.ligands, self.ligandsBindingsTest.molregno == self.ligands.mol_reg_no)
+        return fullTestLigandsDF.select([c for c in fullTestLigandsDF.columns if c not in {'canonical_smiles', 'row_id', 'assay_id', 'molregno'}]).collect()
 
-    def getTestProteinsDS(self):
-        return self.proteinsBindingsTest.collect()
+    def getTestProteinsDS(self):        
+        fullTestProteinsDF = self.proteinsBindingsTest.join(self.proteins, self.proteinsBindingsTest.component_id == self.proteins.comp_id)        
+        return fullTestProteinsDF.select([c for c in fullTestProteinsDF.columns if c not in {'sequence', 'prot_pref_name', 'row_id', 'assay_id', 'comp_id'}]).distinct().collect()
 
     def getSmiles(self, molRegNo):
         """ Get SMILES representation of a molecule.
@@ -229,7 +234,11 @@ class ICS5200Engine(object):
         """
 
         # there should be only one entry and one field
-        return self.ligands.filter(col("molregno") == long(molRegNo)).select("canonical_smiles").collect()[0][0]
+        ligandsSmilesList = self.ligands.filter(col("mol_reg_no") == long(molRegNo)).select("canonical_smiles").collect()
+        if len(ligandsSmilesList) == 0:
+            PythonHelper.writeToJupyterConsole(">Engine getSmiles no molecules with molregno: " + str(molRegNo))
+            
+        return ligandsSmilesList[0][0]
 
     def getLigandsTestTargets(self, molRegNo):
         """ Returns the bindings in test data set.
@@ -257,8 +266,9 @@ class ICS5200Engine(object):
         queryLigand = dict()
         queryLigand.update({0: querySmiles})
         queryRDD = self.sc.parallelize(queryLigand).map(lambda k:(k, molHelper(queryLigand[k])))
-        ligandsRDD = self.ligandsBindingsKnown.join(self.ligands, self.ligandsBindingsKnown.molregno == self.ligands.molregno) \
-                                              .select(self.ligands.molregno, self.ligands.canonical_smiles) \
+        ligandsRDD = self.ligandsBindingsKnown.join(self.ligands, self.ligandsBindingsKnown.molregno == self.ligands.mol_reg_no) \
+                                              .select(self.ligands.mol_reg_no, self.ligands.canonical_smiles) \
+                                              .distinct() \
                                               .rdd.map(lambda (k, v):(k, molHelper(v)))                                              
         simRDD = ligandsRDD.cartesian(queryRDD) \
                            .map(lambda ((k1,v1),(k2,v2)): (k1, float(v1.similarity(v2)))) \
@@ -268,7 +278,7 @@ class ICS5200Engine(object):
                                 StructField("similarity", FloatType(), False)])
         sim = self.sqlContext.createDataFrame(simRDD, simSchema)
         
-        return self.ligandsBindingsKnown.join(sim, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
+        return sim.join(self.ligandsBindingsKnown, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
     
     def __init__(self, sc, dataset_path):
         """Init the recommendation engine given a Spark context and a dataset path
