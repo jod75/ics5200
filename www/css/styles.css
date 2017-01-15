@@ -63,3 +63,9 @@
    margin: 0px;
 }
 
+.proteinul {
+    height:200px;     
+    overflow:hidden; 
+    overflow-y:scroll;
+}
+

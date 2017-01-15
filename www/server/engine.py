@@ -113,7 +113,7 @@ class ICS5200Engine(object):
                                     StructField("mol_pref_name", StringType(), True)])
 
         proteinsSchema = StructType([StructField("comp_id", LongType(), False),
-                                     StructField("accession", StringType(), True),
+                                     StructField("prot_accession", StringType(), True),
                                      StructField("sequence", StringType(), False),
                                      StructField("prot_pref_name", StringType(), True),
                                      StructField("prot_short_name", StringType(), True)])
@@ -192,7 +192,7 @@ class ICS5200Engine(object):
         blastDb = self.proteinsBindingsKnown \
                     .join(self.proteins,
                           self.proteinsBindingsKnown.component_id == self.proteins.comp_id) \
-                    .select("accession", "prot_pref_name", "sequence") \
+                    .select("prot_accession", "prot_pref_name", "sequence") \
                     .distinct() \
                     .rdd \
                     .map(lambda t: str(">ebl|" + t[0] + "| " + t[1] + "\r" + "\r".join(re.findall(".{1,80}",t[2]))))
@@ -279,6 +279,54 @@ class ICS5200Engine(object):
         sim = self.sqlContext.createDataFrame(simRDD, simSchema)
         
         return sim.join(self.ligandsBindingsKnown, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
+
+    def getProteinTestBindings(self, compId):
+        """ Returns the list of Ligand ids known to bind with the given protein.
+
+            Args:
+                compId: long, protein component_id
+
+            Returns:
+                List of known bindings
+        """
+
+        return self.proteinsBindingsTest.filter(col("component_id") == compId).select("molregno").distinct().orderBy("molregno").collect()
+
+    def doProteinExperiment(self, compId):
+        query_seq = self.proteins.filter(col("comp_id") == compId).select("sequence").collect()[0][0]
+        blastp_cline = NcbiblastxCommandline(cmd = "blastp",
+                                     db = self.localFasta,
+                                     evalue = 0.01,
+                                     outfmt = 5,
+                                     remote = False,
+                                     out = self.blastOutFile)
+
+        (out, err) = blastp_cline(stdin = query_seq)
+        PythonHelper.writeToJupyterConsole(">Engine doProteinExperiment out: " + out)
+        PythonHelper.writeToJupyterConsole(">Engine doProteinExperiment err: " + err)
+        
+        # create matching proteins list.
+        # each list entry is a tuple in the format:
+        #  (Accession, Hit, High-Scoring-Pair expect value, hsp)        
+        result_handle = open(self.blastOutFile)
+        blast_record = NCBIXML.read(result_handle)
+        matches = []
+        for alignment in blast_record.alignments:   
+            i = 1
+            for hsp in alignment.hsps:
+                matches.append((alignment.accession, i, hsp.expect, str(hsp)))
+                i = i + 1 
+        
+        simRDD = self.sc.parallelize(matches)       
+        simSchema = StructType([StructField("accession", StringType(), False),
+                                StructField("hit", IntegerType(), False),
+                                StructField("similarity", FloatType(), False),                                
+                                StructField("hsp", StringType(), False)])
+        simDF = self.sqlContext.createDataFrame(simRDD, simSchema)
+        
+        simProteins = simDF.join(self.proteins.select("prot_short_name", "prot_accession", "comp_id"), simDF.accession == self.proteins.prot_accession)
+        fullKnownProteinDF = simProteins.join(self.proteinsBindingsKnown, simProteins.comp_id == self.proteinsBindingsKnown.component_id)
+        return fullKnownProteinDF.select([c for c in fullKnownProteinDF.columns if c not in {"row_id", "assay_id", "prot_accession", "comp_id"}]).distinct().collect()
     
     def __init__(self, sc, dataset_path):
         """Init the recommendation engine given a Spark context and a dataset path

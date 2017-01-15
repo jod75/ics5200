@@ -49,9 +49,8 @@ $(document).ready(function () {
 	} );
     
     $('#proteinSimilarityTable tbody').on('click', 'tr', function () {
-        if (protSimTable.row(this).length > 0) {
-            console.log( 'Row index: ' + protSimTable.row(this).index() );
-            document.getElementById('proteinAlignment').innerText =  protSimTable.row(this).data()[13].replace(/ /g, '\u00a0') 
+        if (protSimTable.row(this).length > 0) {            
+            document.getElementById('proteinAlignment').innerText =  protSimTable.row(this).data()[3].replace(/ /g, '\u00a0') 
         }
 	} );
     
@@ -87,23 +86,25 @@ $(document).ready(function () {
 
     $('#testProteinDataTable tbody').on('click', 'tr', function () {
         if (testProteinDataTable.row(this).length > 0) { 
-            var compId = testProteinDataTable.row(this).data()[0];
-            document.getElementById("selectedTestProtein").innerText = compId;
+            var compId = testProteinDataTable.row(this).data()[6];
+            var accession = testProteinDataTable.row(this).data()[7];
+            document.getElementById("selectedTestProtein").innerText = accession;
 
-            /*$.ajax({
-            url: "http://hadoop1:5432/getProteinTestBindingLigands/" + compId,
+            $.ajax({
+            url: "http://hadoop1:5432/getProteinTestBindings/" + compId,
             type: "get",
             datatype: "json",
             success: function(response) {  
-                var testLigandBindings = document.getElementById("testProteinBindings")              
-                testLigandBindings.innerHTML = "<ul>"
+                var testProteinBindings = document.getElementById("testProteinBindings")              
+                testProteinBindings.innerHTML = "<ul>"
                 targets = JSON.parse(response)
                 for (var i = 0; i < targets.length; i++) {
-                    testLigandBindings.innerHTML += ("<li><samp>" + targets[i] + "</samp></li>");
+                    testProteinBindings.innerHTML += ("<li><samp>" + targets[i] + "</samp></li>");
                 }   
-                testLigandBindings.innerHTML += ("</ul>");
+                testProteinBindings.innerHTML += ("</ul>");
+                document.getElementById("testProteinBindingsTotal").innerText = "( " + targets.length + " )";
             }
-            });*/
+            });
         }
 	} );
     
@@ -159,17 +160,61 @@ $(document).ready(function () {
 		    });
         }
 	} );
+
+    $('#testProteinDataTable tbody').on('dblclick', 'tr', function () {
+        if (testProteinDataTable.row(this).length > 0) { 
+            var compId = testProteinDataTable.row(this).data()[6];
+            var accession = testProteinDataTable.row(this).data()[7];
+            document.getElementById("queryTestProtein").innerText = accession;
+
+            $.ajax({
+            url: "http://hadoop1:5432/getProteinTestBindings/" + compId,
+            type: "get",
+            datatype: "json",
+            success: function(response) {  
+                var testProteinBindings = document.getElementById("queryProteinBindings")              
+                testProteinBindings.innerHTML = "<ul>"
+                targets = JSON.parse(response)
+                for (var i = 0; i < targets.length; i++) {
+                    testProteinBindings.innerHTML += ("<li><samp>" + targets[i] + "</samp></li>");
+                }   
+                testProteinBindings.innerHTML += ("</ul>");
+                document.getElementById("queryProteinBindingsTotal").innerText = "( " + targets.length + " )";
+            }
+            });
+
+            $.ajax({
+			url: "http://hadoop1:5432/doProteinExperiment/" + compId,
+			type: "get",
+			datatype: "json",			
+			success: function (response) {				
+				var res = JSON.parse(response);
+                protSimTable.rows().clear();
+                protSimTable.column(3).visible(false);
+                protSimTable.rows.add(res).draw();
+
+                var knownProteinsUniqueMolRegNo = document.getElementById("queryKnownProteinBindings");
+                knownProteinsUniqueMolRegNo.innerHTML = "<ul>";
+                var uniqueMolRegNo = protSimTable.column(5).data().unique().toArray().sort(sortNumber);
+                for (var i = 0; i < uniqueMolRegNo.length; i++) {
+                    knownProteinsUniqueMolRegNo.innerHTML += ("<li><samp>" + uniqueMolRegNo[i] + "</samp></li>");
+                }
+                knownProteinsUniqueMolRegNo.innerHTML += ("</ul>");
+                document.getElementById("queryKnownProteinBindingsTotal").innerText = "( " + uniqueMolRegNo.length + " )";
+
+                $('#tabs').tabs({ active: 4 });
+			}
+		    });
+        }
+	} );
     
-    /*$(document).ajaxSend(function(event, jqxhr, settings){
-        if (settings.url.includes("/doLigandExperiment/") || settings.url.includes("/getLigandTestTargets/")) {
-            $.LoadingOverlay("show", {image: "./images/molecules-bonding-animation-5.gif", size: "100%", maxSize: 240, resizeInterval: 0});
-        }        
+    // http://gasparesganga.com/labs/jquery-loading-overlay/
+    /*$(document).ajaxStart(function(){
+        $.LoadingOverlay("show");
     });
 
-    $(document).ajaxComplete(function(event, jqxhr, settings){ 
-        if (settings.url.includes("/doLigandExperiment/" ) || settings.url.includes("/getLigandTestTargets/") ) {
-            $.LoadingOverlay("hide");
-        }        
+    $(document).ajaxStop(function(){
+        $.LoadingOverlay("hide");
     });*/
 });
 

@@ -50,6 +50,14 @@ def getLigandTestTargets(molRegNo):
 def doLigandExperiment(molRegNo):
     return json.dumps(ics5200Engine.doLigandExperiment(molRegNo), cls=CustomEncoder)
 
+@main.route("/getProteinTestBindings/<compId>", methods=["GET"])
+def getProteinTestBindings(compId):
+    return json.dumps(ics5200Engine.getProteinTestBindings(compId), cls=CustomEncoder)
+
+@main.route("/doProteinExperiment/<compId>", methods=["GET"])
+def doProteinExperiment(compId):
+    return json.dumps(ics5200Engine.doProteinExperiment(compId), cls=CustomEncoder)
+
 def createApp(sparkContext, datasetPath):
     global ics5200Engine
 

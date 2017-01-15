@@ -109,7 +109,8 @@
                                 <div id="selectedTestProtein"></div>                                
                                 <br/>                                
                                 Binds with ligands:
-                                <div id="testProteinBindings">-</div>
+                                <div class="proteinul" id="testProteinBindings">-</div>
+                                <span id="testProteinBindingsTotal"></span>
                             </td>
                             <td>                                
                             <table id="testProteinDataTable" class="display" cellspacing="0" width="100%">
@@ -133,27 +134,41 @@
                   </div>
                   <div id="tabs-5">
                     <!-- Protein result table -->
-                    <table id="proteinSimilarityTable" class="display" cellspacing="0" width="100%">
-                        <thead>
-                            <tr>
-                                <th>Row ID</th>
-                                <th>Assay ID</th>
-                                <th>Mol Reg No</th>
-                                <th>Std Relation</th>
-                                <th>Std Value</th>
-                                <th>Std Units</th>
-                                <th>Std Type</th>
-                                <th>pChEMBL Value</th>
-                                <th>Component ID</th>
-                                <th>Accession</th>
-                                <th>Hit</th>
-                                <th>Similarity</th>
-                                <th>CompId</th>
-                                <th>HSP</th>
-                            </tr>
-                        </thead>
-                    </table>
-                    
+                    <table>
+                        <tr>
+                            <td>Selected protein:
+                                <div id="queryTestProtein"></div>                                
+                                <br/>                                
+                                Binds with ligands:
+                                <div class="proteinul" id="queryProteinBindings">-</div>
+                                <span id="queryProteinBindingsTotal"></span>
+                                <br />
+                                Known similar ligand bindings:
+                                <div class="proteinul" id="queryKnownProteinBindings">-</div>
+                                <span id="queryKnownProteinBindingsTotal"></span>
+                            </td>
+                            <td>                                
+                            <table id="proteinSimilarityTable" class="display" cellspacing="0" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Accession</th>
+                                        <th>Hit</th>
+                                        <th>Similarity</th>                                        
+                                        <th>HSP</th>
+                                        <th>Protein Short Name</th>
+                                        <th>Mol Reg No</th>
+                                        <th>Std Relation</th>
+                                        <th>Std Value</th>
+                                        <th>Std Units</th>
+                                        <th>Std Type</th>
+                                        <th>pChEMBL Value</th>
+                                        <th>Component ID</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                            </td>
+                        </tr>
+                    </table>                                        
                     <!-- Protein alignment -->
                     <div>Protein Alignment:</div>
                     <div><samp id="proteinAlignment"></samp></div>
