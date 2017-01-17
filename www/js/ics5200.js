@@ -1,5 +1,20 @@
-function sortNumber(a,b) {
+function sortNumber(a, b) {
     return a - b;
+}
+
+function fillDropDown(dropDownElement, values, defaultSelectionIndex) {
+    var sel = document.getElementById(dropDownElement);
+    var fragment = document.createDocumentFragment();
+
+    values.forEach(function(valueItem, index) {
+        var opt = document.createElement('option');
+        opt.innerHTML = valueItem;
+        opt.value = valueItem;
+        fragment.appendChild(opt);
+    });
+
+    sel.appendChild(fragment);
+    sel.selectedIndex = defaultSelectionIndex;
 }
 
 $(document).ready(function () {
@@ -7,8 +22,15 @@ $(document).ready(function () {
     var protSimTable = $('#proteinSimilarityTable').DataTable();
     var testLigandDataTable = $('#testLigandDataTable').DataTable();
     var testProteinDataTable = $('#testProteinDataTable').DataTable();
+    var ligSimilarityAlgorithms = ["None", "Tanimoto", "Dice"];
+    var ligSimilarityFingerprints = ["Morgan", "MACCS"];
     
     $("#tabs").tabs();    
+
+    fillDropDown("ligSim1", ligSimilarityAlgorithms, 1);
+    fillDropDown("ligSim2", ligSimilarityAlgorithms, 0);
+    fillDropDown("ligFP1", ligSimilarityFingerprints, 0);
+    fillDropDown("ligFP2", ligSimilarityFingerprints, 0);
     
     // populate ligand test data table
     $.ajax({
