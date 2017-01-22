@@ -30,9 +30,15 @@
                   </ul>
                   <div id="tabs-1">
                       <h1>Ligand similarity parameters</h1>
-                      <div>Ligand Similarity: <select id="ligSim1"></select>&nbsp &nbsp Fingerprint: <select id="ligFP1"></select></div>
+                      <div>1. Ligand Similarity: <select id="ligSim1"></select>
+                      &nbsp &nbsp Fingerprint: <select id="ligFP1"></select>
+                      &nbsp &nbsp Threshold: <input type="text" id="ligTH1">
+                      </div>
                       <br/>
-                      <div>Ligand Similarity: <select id="ligSim2"></select>&nbsp &nbsp Fingerprint: <select id="ligFP2"></select></div>
+                      <div>2. Ligand Similarity: <select id="ligSim2"></select>
+                      &nbsp &nbsp Fingerprint: <select id="ligFP2"></select>
+                      &nbsp &nbsp Threshold: <input type="text" id="ligTH2">
+                      </div>
                   </div>
                   <div id="tabs-2">
                     <!-- Ligand test table -->
@@ -46,6 +52,8 @@
                                 <br/>
                                 Binds with components:
                                 <div id="testLigandBindings"></div>
+                                <br/>
+                                <button type="button" id="ligandExperimentButton">Run experiment</button>
                             </td>
                             <td>
                             <table id="testLigandDataTable" class="display" cellspacing="0" width="100%">

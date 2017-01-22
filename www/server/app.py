@@ -18,6 +18,7 @@ from flask_cors import CORS, cross_origin
 from decimal import Decimal
 
 from cheminfo import ChemInfo
+from moleculehelper import *
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
@@ -46,9 +47,9 @@ def getSmilesSVG(molRegNo):
 def getLigandTestTargets(molRegNo):
     return json.dumps(ics5200Engine.getLigandsTestTargets(molRegNo))
 
-@main.route("/doLigandExperiment/<molRegNo>", methods=["GET"])
-def doLigandExperiment(molRegNo):
-    return json.dumps(ics5200Engine.doLigandExperiment(molRegNo), cls=CustomEncoder)
+@main.route("/doLigandExperiment/<molRegNo>/<fingerprint>/<similarity>/<threshold>", methods=["GET"])
+def doLigandExperiment(molRegNo, fingerprint, similarity, threshold):
+    return json.dumps(ics5200Engine.doLigandExperiment(molRegNo, LigandHelper, fingerprint, similarity, float(threshold)), cls=CustomEncoder)
 
 @main.route("/getProteinTestBindings/<compId>", methods=["GET"])
 def getProteinTestBindings(compId):

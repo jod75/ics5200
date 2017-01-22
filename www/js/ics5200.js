@@ -7,7 +7,7 @@ function fillDropDown(dropDownElement, values, defaultSelectionIndex) {
     var fragment = document.createDocumentFragment();
 
     values.forEach(function(valueItem, index) {
-        var opt = document.createElement('option');
+        var opt = document.createElement("option");
         opt.innerHTML = valueItem;
         opt.value = valueItem;
         fragment.appendChild(opt);
@@ -15,6 +15,11 @@ function fillDropDown(dropDownElement, values, defaultSelectionIndex) {
 
     sel.appendChild(fragment);
     sel.selectedIndex = defaultSelectionIndex;
+}
+
+function setTextBoxText(textBoxElement, value){
+    var sel = document.getElementById(textBoxElement);
+    sel.value = value;
 }
 
 $(document).ready(function () {
@@ -31,6 +36,8 @@ $(document).ready(function () {
     fillDropDown("ligSim2", ligSimilarityAlgorithms, 0);
     fillDropDown("ligFP1", ligSimilarityFingerprints, 0);
     fillDropDown("ligFP2", ligSimilarityFingerprints, 0);
+    setTextBoxText("ligTH1", "0.8");
+    setTextBoxText("ligTH2", "0.5");
     
     // populate ligand test data table
     $.ajax({
@@ -130,57 +137,58 @@ $(document).ready(function () {
         }
 	} );
     
-    $('#testLigandDataTable tbody').on('dblclick', 'tr', function () {
-        if (testLigandDataTable.row(this).length > 0) {   
-            var molRegNo = testLigandDataTable.row(this).data()[6]
-            document.getElementById("queryLigandMolRegNo").innerText = molRegNo;
-            $.ajax({
-                url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
-                type: "get",
-                datatype: "json",
-                success: function(response) {                    
-                    document.getElementById('queryLigandSVG').innerHTML = response                    
-                }
-            });
-
-            $.ajax({
-            url: "http://hadoop1:5432/getLigandTestTargets/" + molRegNo,
+    $('#ligandExperimentButton').click(function () {
+        var molRegNo = document.getElementById("testLigandMolRegNo").innerText;
+        document.getElementById("queryLigandMolRegNo").innerText = molRegNo;
+        fp = document.getElementById("ligFP1").value;
+        sim = document.getElementById("ligSim1").value;
+        th = document.getElementById("ligTH1").value;
+        $.ajax({
+            url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
             type: "get",
             datatype: "json",
-            success: function(response) {  
-                var queryLigandMolRegNo = document.getElementById("queryLigandMolRegNo")              
-                queryLigandMolRegNo.innerHTML = molRegNo + " ( "
-                var targets = JSON.parse(response)
-                for (var i = 0; i < targets.length; i++) {
-                    queryLigandMolRegNo.innerHTML += (targets[i][0] + " ");
-                }   
-                queryLigandMolRegNo.innerHTML += ")";
+            success: function(response) {                    
+                document.getElementById('queryLigandSVG').innerHTML = response                    
             }
-            });
+        });
 
-            $.ajax({
-			url: "http://hadoop1:5432/doLigandExperiment/" + molRegNo,
-			type: "get",
-			datatype: "json",			
-			success: function (response) {				
-				var res = JSON.parse(response);
-                molSimTable.rows().clear();
-                molSimTable.column(2).visible(false);
-                molSimTable.column(3).visible(false);
-                molSimTable.column(4).visible(false);
-				molSimTable.rows.add(res).draw();
-
-                var knownLigandsUniqueCompId = document.getElementById("knownLigandsUniqueCompId");
-                knownLigandsUniqueCompId.innerHTML = "( ";
-                var uniqueCompIds = molSimTable.column(10).data().unique().toArray().sort(sortNumber);
-                for (var i = 0; i < uniqueCompIds.length; i++) {
-                    knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");
-                }
-                knownLigandsUniqueCompId.innerHTML += ")";
-                $('#tabs').tabs({ active: 2 });
-			}
-		    });
+        $.ajax({
+        url: "http://hadoop1:5432/getLigandTestTargets/" + molRegNo,
+        type: "get",
+        datatype: "json",
+        success: function(response) {  
+            var queryLigandMolRegNo = document.getElementById("queryLigandMolRegNo")              
+            queryLigandMolRegNo.innerHTML = molRegNo + " ( "
+            var targets = JSON.parse(response)
+            for (var i = 0; i < targets.length; i++) {
+                queryLigandMolRegNo.innerHTML += (targets[i][0] + " ");
+            }   
+            queryLigandMolRegNo.innerHTML += ")";
         }
+        });
+
+        $.ajax({
+        url: "http://hadoop1:5432/doLigandExperiment/" + molRegNo + "/" + fp + "/" + sim + "/" + th,
+        type: "get",
+        datatype: "json",			
+        success: function (response) {				
+            var res = JSON.parse(response);
+            molSimTable.rows().clear();
+            molSimTable.column(2).visible(false);
+            molSimTable.column(3).visible(false);
+            molSimTable.column(4).visible(false);
+            molSimTable.rows.add(res).draw();
+
+            var knownLigandsUniqueCompId = document.getElementById("knownLigandsUniqueCompId");
+            knownLigandsUniqueCompId.innerHTML = "( ";
+            var uniqueCompIds = molSimTable.column(10).data().unique().toArray().sort(sortNumber);
+            for (var i = 0; i < uniqueCompIds.length; i++) {
+                knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");
+            }
+            knownLigandsUniqueCompId.innerHTML += ")";
+            $('#tabs').tabs({ active: 2 });
+        }
+        });        
 	} );
 
     $('#testProteinDataTable tbody').on('dblclick', 'tr', function () {

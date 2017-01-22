@@ -238,8 +238,8 @@ class ICS5200Engine(object):
         if len(ligandsSmilesList) == 0:
             PythonHelper.writeToJupyterConsole(">Engine getSmiles no molecules with molregno: " + str(molRegNo))
             
-        return ligandsSmilesList[0][0]
-
+        return ligandsSmilesList[0][0]    
+    
     def getLigandsTestTargets(self, molRegNo):
         """ Returns the bindings in test data set.
 
@@ -252,7 +252,7 @@ class ICS5200Engine(object):
 
         return self.ligandsBindingsTest.filter(col("molregno") == molRegNo).select("component_id").distinct().orderBy("component_id").collect()
 
-    def doLigandExperiment(self, molRegNo, molHelper = MoleculeHelper, similarityThreshold = 0.5):
+    def doLigandExperiment(self, molRegNo, molHelper=MoleculeHelper, fingerprintFunction=None, similarityFunction=None, similarityThreshold=0.5):
         """ Runs a ligand experiment
 
             Args:
@@ -261,15 +261,15 @@ class ICS5200Engine(object):
             Returns:
                 List of known bindings
         """
-                
+
         querySmiles = self.getSmiles(molRegNo)
         queryLigand = dict()
         queryLigand.update({0: querySmiles})
-        queryRDD = self.sc.parallelize(queryLigand).map(lambda k:(k, molHelper(queryLigand[k])))
+        queryRDD = self.sc.parallelize(queryLigand).map(lambda k:(k, molHelper(queryLigand[k], fingerprintFunction, similarityFunction)))
         ligandsRDD = self.ligandsBindingsKnown.join(self.ligands, self.ligandsBindingsKnown.molregno == self.ligands.mol_reg_no) \
                                               .select(self.ligands.mol_reg_no, self.ligands.canonical_smiles) \
                                               .distinct() \
-                                              .rdd.map(lambda (k, v):(k, molHelper(v)))                                              
+                                              .rdd.map(lambda (k, v):(k, molHelper(v, fingerprintFunction, similarityFunction)))
         simRDD = ligandsRDD.cartesian(queryRDD) \
                            .map(lambda ((k1,v1),(k2,v2)): (k1, float(v1.similarity(v2)))) \
                            .filter(lambda (k1, v): v >= similarityThreshold)
