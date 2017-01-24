@@ -67,7 +67,7 @@ $(document).ready(function () {
         if (molSimTable.row(this).length > 0) {            
             document.getElementById('knownLigandMolRegNo').innerText = molSimTable.row(this).data()[0]; 
             $.ajax({
-                url: "http://hadoop1:5432/getSmilesSVG/" + molSimTable.row(this).data()[0],
+                url: "http://hadoop1:5432/getSmilesSVG/" + molSimTable.row(this).data()[0] + "/mol",
                 type: "get",
                 datatype: "json",
                 success: function(response) {                    
@@ -88,7 +88,7 @@ $(document).ready(function () {
             var molRegNo = testLigandDataTable.row(this).data()[6];
             document.getElementById("testLigandMolRegNo").innerText = molRegNo;
             $.ajax({
-                url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
+                url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/mol",
                 type: "get",
                 datatype: "json",
                 success: function(response) {                    
@@ -144,7 +144,7 @@ $(document).ready(function () {
         sim = document.getElementById("ligSim1").value;
         th = document.getElementById("ligTH1").value;
         $.ajax({
-            url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo,
+            url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/mol",
             type: "get",
             datatype: "json",
             success: function(response) {                    
@@ -186,9 +186,21 @@ $(document).ready(function () {
                 knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");
             }
             knownLigandsUniqueCompId.innerHTML += ")";
-            $('#tabs').tabs({ active: 2 });
+            $('#tabs').tabs({ active: 3 });
         }
         });        
+	} );
+
+    $('#ligSmilesExpRender').click(function () {
+        var molRegNo = document.getElementById("ligSmilesExp").value;
+        $.ajax({
+            url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/smiles",
+            type: "get",
+            datatype: "json",
+            success: function(response) {                    
+                document.getElementById('ligSmilesSvg').innerHTML = response                    
+            }
+        });      
 	} );
 
     $('#testProteinDataTable tbody').on('dblclick', 'tr', function () {
@@ -232,7 +244,7 @@ $(document).ready(function () {
                 knownProteinsUniqueMolRegNo.innerHTML += ("</ul>");
                 document.getElementById("queryKnownProteinBindingsTotal").innerText = "( " + uniqueMolRegNo.length + " )";
 
-                $('#tabs').tabs({ active: 4 });
+                $('#tabs').tabs({ active: 5 });
 			}
 		    });
         }

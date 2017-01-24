@@ -34,9 +34,12 @@ def getTestLigandsDS():
 def getTestProteinsDS():
     return json.dumps(ics5200Engine.getTestProteinsDS(), cls=CustomEncoder)
 
-@main.route("/getSmilesSVG/<molRegNo>", methods=["GET"])
-def getSmilesSVG(molRegNo):    
-    smiles = ics5200Engine.getSmiles(molRegNo)
+@main.route("/getSmilesSVG/<molRegNo>/<inputType>", methods=["GET"])
+def getSmilesSVG(molRegNo, inputType):    
+    if inputType.lower() == "smiles":
+        smiles = molRegNo
+    else:
+        smiles = ics5200Engine.getSmiles(molRegNo)
     if len(smiles) > 0:
         logger.debug("smilesToSVG: " + smiles)
         return ChemInfo.smilesToSVG(smiles)

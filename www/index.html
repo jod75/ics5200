@@ -24,9 +24,10 @@
                   <ul>
                     <li><a href="#tabs-1">Query settings</a></li>
                     <li><a href="#tabs-2">Test Data (Ligands)</a></li>
-                    <li><a href="#tabs-3">Ligands Similarity Experiment</a></li>
-                    <li><a href="#tabs-4">Test Data (Proteins)</a></li>
-                    <li><a href="#tabs-5">Proteins Similarity Experiment</a></li>
+                    <li><a href="#tabs-3">Test by SMILES</a></li>
+                    <li><a href="#tabs-4">Ligands Similarity Experiment</a></li>
+                    <li><a href="#tabs-5">Test Data (Proteins)</a></li>
+                    <li><a href="#tabs-6">Proteins Similarity Experiment</a></li>
                   </ul>
                   <div id="tabs-1">
                       <h1>Ligand similarity parameters</h1>
@@ -75,6 +76,14 @@
                     </table>
                   </div>
                   <div id="tabs-3">
+                    <h1>Ligand similarity experiment using SMILES</h1>
+                    <div>Enter ligand SMILES: 
+                        <input class="smilesInput" type="text" id="ligSmilesExp">
+                        <button type="button" id="ligSmilesExpRender">Render SMILES</button>
+                    </div>
+                    <div id="ligSmilesSvg"></div>
+                  </div>
+                  <div id="tabs-4">
                     <!-- Ligand result table -->
                     <table>
                         <tr>
@@ -112,7 +121,7 @@
                         </tr>
                     </table>                    
                   </div>
-                  <div id="tabs-4">
+                  <div id="tabs-5">
                     <!-- Protein test table -->
                     <table>
                         <tr>
@@ -143,7 +152,7 @@
                         </tr>
                     </table>
                   </div>
-                  <div id="tabs-5">
+                  <div id="tabs-6">
                     <!-- Protein result table -->
                     <table>
                         <tr>
