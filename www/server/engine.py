@@ -31,6 +31,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ICS5200Engine(object):
+    ################################################################################################################################################################
+    # Private methods
     def __setup(self):
         """ Performs start-up routines:
             1. Loads data from ChEMBL MySQL and store it in a TSV file on Hadoop
@@ -129,7 +131,7 @@ class ICS5200Engine(object):
                                      StructField("component_id", LongType(), False)])
 
         # Unique Lists
-        ligandsRDD = dataRDD.map(lambda t: (long(t[2]), str(t[11]), str(t[12]))).distinct()
+        ligandsRDD = dataRDD.map(lambda t: (long(t[2]), LigandUtils.getCanonicalSmiles(str(t[11])), str(t[12]))).distinct()
         proteinsRDD = dataRDD.map(lambda t: (long(t[8]), str(t[9]), str(t[10]), str(t[13]), str(t[14]))) \
                              .distinct()
         self.ligands = self.sqlContext.createDataFrame(ligandsRDD, ligandsSchema)
@@ -215,13 +217,38 @@ class ICS5200Engine(object):
         PythonHelper.writeToJupyterConsole(">Engine init makeblastdb out: " + out)
         PythonHelper.writeToJupyterConsole(">Engine init makeblastdb err: " + err)
 
+    def __doLigandExperiment(self, querySmiles, molHelper=MoleculeHelper, fingerprintFunction=None, similarityFunction=None, similarityThreshold=0.5):
+        """ Runs a ligand experiment
+
+            Args:
+                querySmiles: SMILES string
+
+            Returns:
+                List of known bindings
+        """
+        
+        queryLigand = dict()
+        queryLigand.update({0: querySmiles})
+        queryRDD = self.sc.parallelize(queryLigand).map(lambda k:(k, molHelper(queryLigand[k], fingerprintFunction, similarityFunction)))
+        ligandsRDD = self.ligandsBindingsKnown.join(self.ligands, self.ligandsBindingsKnown.molregno == self.ligands.mol_reg_no) \
+                                              .select(self.ligands.mol_reg_no, self.ligands.canonical_smiles) \
+                                              .distinct() \
+                                              .rdd.map(lambda (k, v):(k, molHelper(v, fingerprintFunction, similarityFunction)))
+        simRDD = ligandsRDD.cartesian(queryRDD) \
+                           .map(lambda ((k1,v1),(k2,v2)): (k1, float(v1.similarity(v2)))) \
+                           .filter(lambda (k1, v): v >= similarityThreshold)
+
+        simSchema = StructType([StructField("molregno", LongType(), False),                                
+                                StructField("similarity", FloatType(), False)])
+        sim = self.sqlContext.createDataFrame(simRDD, simSchema)
+        
+        return sim.join(self.ligandsBindingsKnown, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
+
+    ################################################################################################################################################################
+    # Public methods  *** Ligands ***
     def getTestLigandsDS(self):
         fullTestLigandsDF = self.ligandsBindingsTest.join(self.ligands, self.ligandsBindingsTest.molregno == self.ligands.mol_reg_no)
         return fullTestLigandsDF.select([c for c in fullTestLigandsDF.columns if c not in {'canonical_smiles', 'row_id', 'assay_id', 'molregno'}]).collect()
-
-    def getTestProteinsDS(self):        
-        fullTestProteinsDF = self.proteinsBindingsTest.join(self.proteins, self.proteinsBindingsTest.component_id == self.proteins.comp_id)        
-        return fullTestProteinsDF.select([c for c in fullTestProteinsDF.columns if c not in {'sequence', 'prot_pref_name', 'row_id', 'assay_id', 'comp_id'}]).distinct().collect()
 
     def getSmiles(self, molRegNo):
         """ Get SMILES representation of a molecule.
@@ -252,6 +279,8 @@ class ICS5200Engine(object):
 
         return self.ligandsBindingsTest.filter(col("molregno") == molRegNo).select("component_id").distinct().orderBy("component_id").collect()
 
+    
+
     def doLigandExperiment(self, molRegNo, molHelper=MoleculeHelper, fingerprintFunction=None, similarityFunction=None, similarityThreshold=0.5):
         """ Runs a ligand experiment
 
@@ -263,22 +292,42 @@ class ICS5200Engine(object):
         """
 
         querySmiles = self.getSmiles(molRegNo)
-        queryLigand = dict()
-        queryLigand.update({0: querySmiles})
-        queryRDD = self.sc.parallelize(queryLigand).map(lambda k:(k, molHelper(queryLigand[k], fingerprintFunction, similarityFunction)))
-        ligandsRDD = self.ligandsBindingsKnown.join(self.ligands, self.ligandsBindingsKnown.molregno == self.ligands.mol_reg_no) \
-                                              .select(self.ligands.mol_reg_no, self.ligands.canonical_smiles) \
-                                              .distinct() \
-                                              .rdd.map(lambda (k, v):(k, molHelper(v, fingerprintFunction, similarityFunction)))
-        simRDD = ligandsRDD.cartesian(queryRDD) \
-                           .map(lambda ((k1,v1),(k2,v2)): (k1, float(v1.similarity(v2)))) \
-                           .filter(lambda (k1, v): v >= similarityThreshold)
+        return self.__doLigandExperiment(querySmiles, molHelper, fingerprintFunction, similarityFunction, similarityThreshold) 
 
-        simSchema = StructType([StructField("molregno", LongType(), False),                                
-                                StructField("similarity", FloatType(), False)])
-        sim = self.sqlContext.createDataFrame(simRDD, simSchema)
+    def doLigandExperimentFromSmiles(self, querySmiles, molHelper=MoleculeHelper, fingerprintFunction=None, similarityFunction=None, similarityThreshold=0.5):
+        """ Runs a ligand experiment
+
+            Args:
+                querySmiles: SMILES string
+
+            Returns:
+                List of known bindings
+        """
         
-        return sim.join(self.ligandsBindingsKnown, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
+        return self.__doLigandExperiment(querySmiles, molHelper, fingerprintFunction, similarityFunction, similarityThreshold)  
+    
+    def isLigandInChEMBL(self, querySmiles):
+        """ Checks whether the input querySmiles exists in ChEMBL data (or our sample)            
+
+            Args:
+                querySmiles: SMILES string
+
+            Returns:
+                long[]: If the ligand exists in our sample, then the function returns an array of molRegNo, else it returns an empty array.
+        """
+
+        querySmiles = LigandUtils.getCanonicalSmiles(querySmiles)
+        molRegNoList = self.ligands.filter(col("canonical_smiles") == querySmiles).select("mol_reg_no").collect()
+        if len(molRegNoList) == 0:
+            PythonHelper.writeToJupyterConsole(">Engine isLigandInChEMBL no molecules with given canonical SMILES: " + querySmiles)
+            
+        return molRegNoList
+
+    ################################################################################################################################################################
+    # Public methods  *** Proteins ***
+    def getTestProteinsDS(self):
+        fullTestProteinsDF = self.proteinsBindingsTest.join(self.proteins, self.proteinsBindingsTest.component_id == self.proteins.comp_id)        
+        return fullTestProteinsDF.select([c for c in fullTestProteinsDF.columns if c not in {'sequence', 'prot_pref_name', 'row_id', 'assay_id', 'comp_id'}]).distinct().collect()
 
     def getProteinTestBindings(self, compId):
         """ Returns the list of Ligand ids known to bind with the given protein.
@@ -327,7 +376,9 @@ class ICS5200Engine(object):
         simProteins = simDF.join(self.proteins.select("prot_short_name", "prot_accession", "comp_id"), simDF.accession == self.proteins.prot_accession)
         fullKnownProteinDF = simProteins.join(self.proteinsBindingsKnown, simProteins.comp_id == self.proteinsBindingsKnown.component_id)
         return fullKnownProteinDF.select([c for c in fullKnownProteinDF.columns if c not in {"row_id", "assay_id", "prot_accession", "comp_id"}]).distinct().collect()
-    
+        
+    ################################################################################################################################################################
+    # Constructor
     def __init__(self, sc, dataset_path):
         """Init the recommendation engine given a Spark context and a dataset path
         """

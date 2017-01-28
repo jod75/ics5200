@@ -118,7 +118,7 @@ class LigandHelper(MoleculeHelper):
         if (self.__fpfn == "maccs"):
             return MACCSkeys.GenMACCSKeys(molecule)
         else:
-            # default to TanimotoSimilarity
+            # default to Morgan fingerprint
             return AllChem.GetMorganFingerprintAsBitVect(molecule, 2)        
 
     def similarityAlgorithm(self, otherFingerprint, metric=DataStructs.TanimotoSimilarity):
@@ -127,4 +127,19 @@ class LigandHelper(MoleculeHelper):
         else:
             # default to TanimotoSimilarity
             return DataStructs.TanimotoSimilarity(self.getFingerprint(), otherFingerprint)
+
+
+# In[ ]:
+
+class LigandUtils(object):
+    """ Provides static methods to facilitate Ligands manipulation
+    """
+    
+    @staticmethod
+    def getCanonicalSmiles(smiles):
+        mol = Chem.MolFromSmiles(smiles)
+        if (mol == None):
+            return smiles
+        else:
+            return Chem.MolToSmiles(mol)
 

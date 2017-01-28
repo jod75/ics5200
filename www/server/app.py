@@ -20,26 +20,26 @@ from decimal import Decimal
 from cheminfo import ChemInfo
 from moleculehelper import *
 
+################################################################################################################################################################
+# Helper class
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Decimal):
             return float(o)
         return super(CustomEncoder, self).default(o)
 
+################################################################################################################################################################
+# Ligands
 @main.route("/getTestLigandsDS/", methods=["GET"])
 def getTestLigandsDS():
     return json.dumps(ics5200Engine.getTestLigandsDS(), cls=CustomEncoder)
 
-@main.route("/getTestProteinsDS/", methods=["GET"])
-def getTestProteinsDS():
-    return json.dumps(ics5200Engine.getTestProteinsDS(), cls=CustomEncoder)
-
-@main.route("/getSmilesSVG/<molRegNo>/<inputType>", methods=["GET"])
-def getSmilesSVG(molRegNo, inputType):    
+@main.route("/getSmilesSVG/<input>/<inputType>", methods=["GET"])
+def getSmilesSVG(input, inputType):    
     if inputType.lower() == "smiles":
-        smiles = molRegNo
+        smiles = input
     else:
-        smiles = ics5200Engine.getSmiles(molRegNo)
+        smiles = ics5200Engine.getSmiles(input)
     if len(smiles) > 0:
         logger.debug("smilesToSVG: " + smiles)
         return ChemInfo.smilesToSVG(smiles)
@@ -54,6 +54,20 @@ def getLigandTestTargets(molRegNo):
 def doLigandExperiment(molRegNo, fingerprint, similarity, threshold):
     return json.dumps(ics5200Engine.doLigandExperiment(molRegNo, LigandHelper, fingerprint, similarity, float(threshold)), cls=CustomEncoder)
 
+@main.route("/doLigandExperimentFromSmiles/<smiles>/<fingerprint>/<similarity>/<threshold>", methods=["GET"])
+def doLigandExperimentFromSmiles(smiles, fingerprint, similarity, threshold):
+    return json.dumps(ics5200Engine.doLigandExperimentFromSmiles(smiles, LigandHelper, fingerprint, similarity, float(threshold)), cls=CustomEncoder)
+
+@main.route("/isLigandInChEMBL/<smiles>", methods=["GET"])
+def isLigandInChEMBL(smiles):
+    return json.dumps(ics5200Engine.isLigandInChEMBL(smiles))
+
+################################################################################################################################################################
+# Proteins
+@main.route("/getTestProteinsDS/", methods=["GET"])
+def getTestProteinsDS():
+    return json.dumps(ics5200Engine.getTestProteinsDS(), cls=CustomEncoder)
+
 @main.route("/getProteinTestBindings/<compId>", methods=["GET"])
 def getProteinTestBindings(compId):
     return json.dumps(ics5200Engine.getProteinTestBindings(compId), cls=CustomEncoder)
@@ -62,6 +76,8 @@ def getProteinTestBindings(compId):
 def doProteinExperiment(compId):
     return json.dumps(ics5200Engine.doProteinExperiment(compId), cls=CustomEncoder)
 
+################################################################################################################################################################
+# Creating Flask App
 def createApp(sparkContext, datasetPath):
     global ics5200Engine
 

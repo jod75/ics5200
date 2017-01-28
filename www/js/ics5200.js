@@ -140,9 +140,9 @@ $(document).ready(function () {
     $('#ligandExperimentButton').click(function () {
         var molRegNo = document.getElementById("testLigandMolRegNo").innerText;
         document.getElementById("queryLigandMolRegNo").innerText = molRegNo;
-        fp = document.getElementById("ligFP1").value;
-        sim = document.getElementById("ligSim1").value;
-        th = document.getElementById("ligTH1").value;
+        var fp = document.getElementById("ligFP1").value;
+        var sim = document.getElementById("ligSim1").value;
+        var th = document.getElementById("ligTH1").value;
         $.ajax({
             url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/mol",
             type: "get",
@@ -192,15 +192,67 @@ $(document).ready(function () {
 	} );
 
     $('#ligSmilesExpRender').click(function () {
-        var molRegNo = document.getElementById("ligSmilesExp").value;
+        var smiles = document.getElementById("ligSmilesExp").value;
         $.ajax({
-            url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/smiles",
+            url: "http://hadoop1:5432/getSmilesSVG/" + smiles + "/smiles",
             type: "get",
             datatype: "json",
-            success: function(response) {                    
-                document.getElementById('ligSmilesSvg').innerHTML = response                    
+            success: function(response) {
+                document.getElementById('ligSmilesSvg').innerHTML = response                                    
             }
         });      
+	} );
+
+    $('#ligSmilesExpRun').click(function () {
+        var smiles = document.getElementById("ligSmilesExp").value;
+        var fp = document.getElementById("ligFP1").value;
+        var sim = document.getElementById("ligSim1").value;
+        var th = document.getElementById("ligTH1").value;
+
+        // render SVG
+        $.ajax({
+            url: "http://hadoop1:5432/getSmilesSVG/" + smiles + "/smiles",
+            type: "get",
+            datatype: "json",
+            success: function(response) {
+                document.getElementById('ligSmilesSvg').innerHTML = response;
+                document.getElementById('queryLigandSVG').innerHTML = response;
+            }
+        });
+
+        // check if ligand is in chembl
+        $.ajax({
+            url: "http://hadoop1:5432/isLigandInChEMBL/" + smiles,
+            type: "get",
+            datatype: "json",
+            success: function(response) {
+                document.getElementById("queryLigandMolRegNo").innerText = "In ChEMBL: " + response;                
+            }
+        });    
+
+        // run experiment using smiles
+        $.ajax({
+        url: "http://hadoop1:5432/doLigandExperimentFromSmiles/" + smiles + "/" + fp + "/" + sim + "/" + th,
+        type: "get",
+        datatype: "json",			
+        success: function (response) {				
+            var res = JSON.parse(response);
+            molSimTable.rows().clear();
+            molSimTable.column(2).visible(false);
+            molSimTable.column(3).visible(false);
+            molSimTable.column(4).visible(false);
+            molSimTable.rows.add(res).draw();
+
+            var knownLigandsUniqueCompId = document.getElementById("knownLigandsUniqueCompId");
+            knownLigandsUniqueCompId.innerHTML = "( ";
+            var uniqueCompIds = molSimTable.column(10).data().unique().toArray().sort(sortNumber);
+            for (var i = 0; i < uniqueCompIds.length; i++) {
+                knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");
+            }
+            knownLigandsUniqueCompId.innerHTML += ")";
+            $('#tabs').tabs({ active: 3 });
+        }
+        });
 	} );
 
     $('#testProteinDataTable tbody').on('dblclick', 'tr', function () {

@@ -239,7 +239,8 @@ class ChEMBLHelper:
                         tsv.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % 
                                   (row_id, assay_id, molregno, std_relation, std_value, std_units,
                                    std_type, pchembl_value, component_id, accession, 
-                                   sequence, canonical_smiles, mol_pref_name, prot_pref_name, prot_short_name))
+                                   sequence, canonical_smiles, 
+                                   mol_pref_name, prot_pref_name, prot_short_name))
                         if not rowsRead:   #checking a flag must be faster than setting it <- confirm this?!
                             rowsRead = True                
                     i = i + 1
