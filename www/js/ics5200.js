@@ -142,7 +142,9 @@ $(document).ready(function () {
         document.getElementById("queryLigandMolRegNo").innerText = molRegNo;
         var fp = document.getElementById("ligFP1").value;
         var sim = document.getElementById("ligSim1").value;
-        var th = document.getElementById("ligTH1").value;
+        var th = document.getElementById("ligTH1").value;       
+        var list1 = $.Deferred(); 
+        var list2 = $.Deferred(); 
         $.ajax({
             url: "http://hadoop1:5432/getSmilesSVG/" + molRegNo + "/mol",
             type: "get",
@@ -157,21 +159,25 @@ $(document).ready(function () {
         type: "get",
         datatype: "json",
         success: function(response) {  
-            var queryLigandMolRegNo = document.getElementById("queryLigandMolRegNo")              
+            var queryLigandMolRegNo = document.getElementById("queryLigandMolRegNo") 
+            var targetsList = [];             
             queryLigandMolRegNo.innerHTML = molRegNo + " ( "
             var targets = JSON.parse(response)
             for (var i = 0; i < targets.length; i++) {
                 queryLigandMolRegNo.innerHTML += (targets[i][0] + " ");
+                targetsList.push(targets[i][0]);
             }   
             queryLigandMolRegNo.innerHTML += ")";
+            list2.resolve(targetsList);
         }
         });
 
         $.ajax({
         url: "http://hadoop1:5432/doLigandExperiment/" + molRegNo + "/" + fp + "/" + sim + "/" + th,
         type: "get",
-        datatype: "json",			
-        success: function (response) {				
+        datatype: "json",	
+        mydata: "",		
+        success: function (response) {		            	
             var res = JSON.parse(response);
             molSimTable.rows().clear();
             molSimTable.column(2).visible(false);
@@ -183,12 +189,22 @@ $(document).ready(function () {
             knownLigandsUniqueCompId.innerHTML = "( ";
             var uniqueCompIds = molSimTable.column(10).data().unique().toArray().sort(sortNumber);
             for (var i = 0; i < uniqueCompIds.length; i++) {
-                knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");
+                knownLigandsUniqueCompId.innerHTML += (uniqueCompIds[i] + " ");                
             }
-            knownLigandsUniqueCompId.innerHTML += ")";
+            knownLigandsUniqueCompId.innerHTML += ")";                
             $('#tabs').tabs({ active: 3 });
+            list1.resolve(uniqueCompIds);
         }
-        });        
+        });
+
+        $.when(list1, list2).done(function(a1, a2){
+            $.getScript("js/underscore-min.js", function(){
+                var sizeOfUnion = _.union(a1, a2).length;
+                var sizeOfIntersect = _.intersection(a1, a2).length;
+                var jaccard = sizeOfIntersect / sizeOfUnion;
+                knownLigandsUniqueCompId.innerHTML += "<br>Jaccard similarity: " + jaccard;
+            });            
+        });
 	} );
 
     $('#ligSmilesExpRender').click(function () {
