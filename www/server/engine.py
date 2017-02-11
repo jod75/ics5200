@@ -57,7 +57,7 @@ class ICS5200Engine(object):
         hdfsServer = "http://hadoop1:50070" # hdfs path
         localHome = "/home/hduser/Lab"
         hdfsHome = "/user/hduser/ics5200"
-        datasetCount = 100000 # dataset count of bindings from ChEMBL
+        datasetCount = 500000 # dataset count of bindings from ChEMBL
 
         self.sparkFastaFile = "/home/hduser/Lab/chembl" + \
             str(datasetCount) + \
@@ -191,13 +191,14 @@ class ICS5200Engine(object):
         shutil.rmtree(self.sparkFastaFile, ignore_errors=True)
 
         # manipulate raw data rdd and create FASTA file
+        # using "prot_pref_name" may result in duplicate values as it is not unique
         blastDb = self.proteinsBindingsKnown \
                     .join(self.proteins,
                           self.proteinsBindingsKnown.component_id == self.proteins.comp_id) \
-                    .select("prot_accession", "prot_pref_name", "sequence") \
+                    .select("prot_accession", "sequence") \
                     .distinct() \
                     .rdd \
-                    .map(lambda t: str(">ebl|" + t[0] + "| " + t[1] + "\r" + "\r".join(re.findall(".{1,80}",t[2]))))
+                    .map(lambda t: str(">ebl|" + t[0] + "|\r" + "\r".join(re.findall(".{1,80}",t[1]))))
         
         dump = blastDb.collect()
         myfile = open(self.localFasta, "w")

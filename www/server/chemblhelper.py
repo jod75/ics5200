@@ -286,7 +286,36 @@ class ChEMBLHelper:
                 "      cs.component_id = cc.component_id AND " +
                 "      cc.protein_class_id = pc.protein_class_id AND " +
                 "      asy.assay_tax_id = 9606 AND act.molregno = md.molregno AND " +
-                "      md.molregno = cps.molregno;")
+                "      md.molregno = cps.molregno AND " +                
+                "      (act.pchembl_value IS NULL OR act.pchembl_value >= 4.75) AND " +
+                "      act.standard_value > 0 AND " +
+                "      ( " +
+                "        (act.standard_type = 'Inhibition' and lower(act.standard_units) = '%' and act.standard_value >= 70 and act.standard_value <= 100 and act.standard_relation in ('>', '=', '>=', '~')) " +
+                "        OR (act.standard_type = 'IC50' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'IC50' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'IC90' and lower(act.standard_units) = 'nm' and act.standard_value <= 100000 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'IC90' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 32 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'MIC' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '=', '<=', '~'))     " +
+                "        OR (act.standard_type = 'MIC' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'MIC50' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '=', '<=', '~'))     " +
+                "        OR (act.standard_type = 'MIC50' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'MIC95' and lower(act.standard_units) = 'um' and act.standard_value <= 100 and act.standard_relation in ('<', '=', '<=', '~'))     " +
+                "        OR (act.standard_type = 'MIC95' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 32 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'EC50' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'EC50' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'ED50' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'ED50' and lower(act.standard_units) = 'mg.kg-1' and act.standard_value <= 250 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'MBC' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'MBC90' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 32 and act.standard_relation in ('<', '=', '<=', '~')) " +
+                "        OR (act.standard_type = 'GI' and lower(act.standard_units) = '%'  and act.standard_value >= 70 and act.standard_value <= 100 and act.standard_relation in ('>', '=', '>=', '~')) " +
+                "        OR (act.standard_type = 'GI' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '<=', '=', '~')) " +
+                "        OR (act.standard_type = 'GI' and lower(act.standard_units) = 'um' and act.standard_value <= 25 and act.standard_relation in ('<', '<=', '=', '~')) " +
+                "        OR (act.standard_type = 'GI50' and lower(act.standard_units) in ('ug.ml-1', 'ug ml-1') and act.standard_value <= 8 and act.standard_relation in ('<', '<=', '=', '~')) " +
+                "        OR (act.standard_type = 'GI50' and lower(act.standard_units) = 'nm' and act.standard_value <= 25000 and act.standard_relation in ('<', '<=', '=', '~')) " +
+                "      ) AND " +
+                "      md.molecule_type = 'Small molecule' AND " +
+                "      md.polymer_flag = 0;"
+            )
             
             cursor.execute(mysqlCreateBindingTable)            
 
