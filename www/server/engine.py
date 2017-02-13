@@ -57,7 +57,7 @@ class ICS5200Engine(object):
         hdfsServer = "http://hadoop1:50070" # hdfs path
         localHome = "/home/hduser/Lab"
         hdfsHome = "/user/hduser/ics5200"
-        datasetCount = 500000 # dataset count of bindings from ChEMBL
+        datasetCount = 100000 # dataset count of bindings from ChEMBL
 
         self.sparkFastaFile = "/home/hduser/Lab/chembl" + \
             str(datasetCount) + \
@@ -75,6 +75,31 @@ class ICS5200Engine(object):
 
         # Step 4 - Create Blast DB
         self.__createLocalBlastDb()
+
+        # Step 5 - Summarize data
+        self.__summarizeData()
+
+    def __summarizeData(self):
+        totalProteins = self.proteins.select("comp_id").distinct().count()
+        totalLigands = self.ligands.select("mol_reg_no").distinct().count()
+        unseenProteins = self.proteinsBindingsTest.select("component_id").distinct().count()
+        unseenLigands = self.ligandsBindingsTest.select("molregno").distinct().count()
+        knownProteins = self.proteinsBindingsKnown.select("component_id").distinct().count()
+        knownLigands = self.ligandsBindingsKnown.select("molregno").distinct().count()
+        knownProteinBindings = self.proteinsBindingsKnown.count()
+        knownLigandBindings = self.ligandsBindingsKnown.count()
+        PythonHelper.writeToJupyterConsole("==============================================")
+        PythonHelper.writeToJupyterConsole(">Proteins: ")
+        PythonHelper.writeToJupyterConsole(">Total Proteins: " + str(totalProteins))
+        PythonHelper.writeToJupyterConsole(">Unseen Proteins: " + str(unseenProteins))
+        PythonHelper.writeToJupyterConsole(">Test Bank Proteins: " + str(knownProteins))
+        PythonHelper.writeToJupyterConsole(">Test Bank Bindings: " + str(knownProteinBindings))
+        PythonHelper.writeToJupyterConsole(">Ligands")
+        PythonHelper.writeToJupyterConsole(">Total Ligands: " + str(totalLigands))
+        PythonHelper.writeToJupyterConsole(">Unseen Ligands: " + str(unseenLigands))
+        PythonHelper.writeToJupyterConsole(">Test Bank Ligands: " + str(knownLigands))
+        PythonHelper.writeToJupyterConsole(">Test Bank Bindings: " + str(knownLigandBindings))
+        PythonHelper.writeToJupyterConsole("==============================================")
 
     def __sampleData(self, ligandTestPercentage=0.01, proteinTestPercentage=0.05, seeding=None):
         """  Splits raw data into test and known sets
