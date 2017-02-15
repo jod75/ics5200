@@ -57,7 +57,7 @@ class ICS5200Engine(object):
         hdfsServer = "http://hadoop1:50070" # hdfs path
         localHome = "/home/hduser/Lab"
         hdfsHome = "/user/hduser/ics5200"
-        datasetCount = 100000 # dataset count of bindings from ChEMBL
+        datasetCount = 500000 # dataset count of bindings from ChEMBL
 
         self.sparkFastaFile = "/home/hduser/Lab/chembl" + \
             str(datasetCount) + \
@@ -71,13 +71,13 @@ class ICS5200Engine(object):
                                                             datasetCount)
 
         # Step 2 and 3 - Sampling
-        self.__sampleData(0.01, 0.05, 1) # 1% used for testing
+        self.__sampleData(0, 0, 1) # 1% used for testing
 
         # Step 4 - Create Blast DB
         self.__createLocalBlastDb()
 
         # Step 5 - Summarize data
-        self.__summarizeData()
+        # self.__summarizeData()
 
     def __summarizeData(self):
         totalProteins = self.proteins.select("comp_id").distinct().count()
@@ -329,7 +329,8 @@ class ICS5200Engine(object):
             Returns:
                 List of known bindings
         """
-        
+
+        PythonHelper.writeToJupyterConsole(">doLigandExperimentFromSmiles: " + querySmiles)
         return self.__doLigandExperiment(querySmiles, molHelper, fingerprintFunction, similarityFunction, similarityThreshold)  
     
     def isLigandInChEMBL(self, querySmiles):

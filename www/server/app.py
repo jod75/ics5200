@@ -5,6 +5,7 @@
 from flask import Blueprint
 main = Blueprint('main', __name__)
 
+import urllib
 import json
 from engine import ICS5200Engine
 
@@ -19,6 +20,7 @@ from decimal import Decimal
 
 from cheminfo import ChemInfo
 from moleculehelper import *
+from pythonhelper import *
 
 ################################################################################################################################################################
 # Helper class
@@ -37,10 +39,11 @@ def getTestLigandsDS():
 @main.route("/getSmilesSVG/<input>/<inputType>", methods=["GET"])
 def getSmilesSVG(input, inputType):    
     if inputType.lower() == "smiles":
-        smiles = input
+        smiles = urllib.unquote(input)
     else:
         smiles = ics5200Engine.getSmiles(input)
     if len(smiles) > 0:
+        PythonHelper.writeToJupyterConsole(">smilesToSVG: " + smiles)
         logger.debug("smilesToSVG: " + smiles)
         return ChemInfo.smilesToSVG(smiles)
     else:
@@ -56,11 +59,11 @@ def doLigandExperiment(molRegNo, fingerprint, similarity, threshold):
 
 @main.route("/doLigandExperimentFromSmiles/<smiles>/<fingerprint>/<similarity>/<threshold>", methods=["GET"])
 def doLigandExperimentFromSmiles(smiles, fingerprint, similarity, threshold):
-    return json.dumps(ics5200Engine.doLigandExperimentFromSmiles(smiles, LigandHelper, fingerprint, similarity, float(threshold)), cls=CustomEncoder)
+    return json.dumps(ics5200Engine.doLigandExperimentFromSmiles(urllib.unquote(smiles), LigandHelper, fingerprint, similarity, float(threshold)), cls=CustomEncoder)
 
 @main.route("/isLigandInChEMBL/<smiles>", methods=["GET"])
 def isLigandInChEMBL(smiles):
-    return json.dumps(ics5200Engine.isLigandInChEMBL(smiles))
+    return json.dumps(ics5200Engine.isLigandInChEMBL(urllib.unquote(smiles)))
 
 ################################################################################################################################################################
 # Proteins

@@ -210,7 +210,7 @@ $(document).ready(function () {
     $('#ligSmilesExpRender').click(function () {
         var smiles = document.getElementById("ligSmilesExp").value;
         $.ajax({
-            url: "http://hadoop1:5432/getSmilesSVG/" + smiles + "/smiles",
+            url: "http://hadoop1:5432/getSmilesSVG/" + encodeURIComponent(smiles) + "/smiles",
             type: "get",
             datatype: "json",
             success: function(response) {
@@ -220,7 +220,7 @@ $(document).ready(function () {
 	} );
 
     $('#ligSmilesExpRun').click(function () {
-        var smiles = document.getElementById("ligSmilesExp").value;
+        var smiles = encodeURIComponent(document.getElementById("ligSmilesExp").value);
         var fp = document.getElementById("ligFP1").value;
         var sim = document.getElementById("ligSim1").value;
         var th = document.getElementById("ligTH1").value;
