@@ -143,7 +143,8 @@ class ICS5200Engine(object):
                                      StructField("prot_accession", StringType(), True),
                                      StructField("sequence", StringType(), False),
                                      StructField("prot_pref_name", StringType(), True),
-                                     StructField("prot_short_name", StringType(), True)])
+                                     StructField("prot_short_name", StringType(), True),
+                                     StructField("prot_description", StringType(), True)])
 
         bindingsSchema = StructType([StructField("row_id", LongType(), False),
                                      StructField("assay_id", LongType(), False),
@@ -157,7 +158,7 @@ class ICS5200Engine(object):
 
         # Unique Lists
         ligandsRDD = dataRDD.map(lambda t: (long(t[2]), LigandUtils.getCanonicalSmiles(str(t[11])), str(t[12]))).distinct()
-        proteinsRDD = dataRDD.map(lambda t: (long(t[8]), str(t[9]), str(t[10]), str(t[13]), str(t[14]))) \
+        proteinsRDD = dataRDD.map(lambda t: (long(t[8]), str(t[9]), str(t[10]), str(t[13]), str(t[14]), str(t[15]))) \
                              .distinct()
         self.ligands = self.sqlContext.createDataFrame(ligandsRDD, ligandsSchema)
         self.proteins = self.sqlContext.createDataFrame(proteinsRDD, proteinsSchema)
@@ -268,7 +269,13 @@ class ICS5200Engine(object):
                                 StructField("similarity", FloatType(), False)])
         sim = self.sqlContext.createDataFrame(simRDD, simSchema)
         
-        return sim.join(self.ligandsBindingsKnown, self.ligandsBindingsKnown.molregno == sim.molregno).orderBy(desc("similarity")).collect()
+        # get protein details
+        simProteinsAndBindings = self.ligandsBindingsKnown.join(self.proteins.select("prot_description", "prot_accession", "comp_id"), 
+                    self.ligandsBindingsKnown.component_id == self.proteins.comp_id)
+
+        return sim.join(simProteinsAndBindings, simProteinsAndBindings.molregno == sim.molregno) \
+                    .join(self.ligands.select("mol_reg_no", "mol_pref_name"),  sim.molregno == self.ligands.mol_reg_no) \
+                    .orderBy(desc("similarity")).collect()
 
     ################################################################################################################################################################
     # Public methods  *** Ligands ***

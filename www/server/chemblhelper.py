@@ -193,7 +193,7 @@ class ChEMBLHelper:
                     <row_id, assay_id, molrgeno, standard_relation, standard_value, 
                      standard_units, standard_type, pchembl_value, componend_id, 
                      accession, sequence, canonical_smiles, mol_pref_name, prot_pref_name, 
-                     prot_short_name>
+                     prot_short_name, prot_description>
                 limit: the number of bindings to return.
         """
         # create a custom table with all our needed data
@@ -217,7 +217,7 @@ class ChEMBLHelper:
                      "     standard_relation, CAST(standard_value as DECIMAL(38,30)), " +
                      "     standard_units, standard_type, " +
                      "     CAST(pchembl_value as DECIMAL(38,30)), component_id, " +
-                     "     accession, sequence, canonical_smiles, mol_pref_name, prot_pref_name, short_name "+
+                     "     accession, sequence, canonical_smiles, mol_pref_name, prot_pref_name, short_name, prot_description "+
                      "FROM binding " +                     
                      "ORDER BY row_id " +
                      limitClause + ";")            
@@ -234,13 +234,13 @@ class ChEMBLHelper:
                     rowsRead = False # need to track if there were any rows in resultset due to non buffered cursor mode                 
                     for (row_id, assay_id, molregno, std_relation, std_value, std_units, std_type,
                          pchembl_value, component_id, accession, sequence, canonical_smiles,
-                         mol_pref_name, prot_pref_name, prot_short_name) in cursor:
+                         mol_pref_name, prot_pref_name, prot_short_name, prot_description) in cursor:
                         # as per os.linesp - use \n for terminator on all platforms
-                        tsv.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % 
+                        tsv.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % 
                                   (row_id, assay_id, molregno, std_relation, std_value, std_units,
                                    std_type, pchembl_value, component_id, accession, 
                                    sequence, canonical_smiles, 
-                                   mol_pref_name, prot_pref_name, prot_short_name))
+                                   mol_pref_name, prot_pref_name, prot_short_name, prot_description))
                         if not rowsRead:   #checking a flag must be faster than setting it <- confirm this?!
                             rowsRead = True                
                     i = i + 1
@@ -274,7 +274,7 @@ class ChEMBLHelper:
                 "     act.standard_relation, act.standard_value, " +
                 "     act.standard_units, act.standard_type, " +
                 "     act.pchembl_value, tc.component_id, " +
-                "     cs.accession, cs.sequence, cps.canonical_smiles, "+
+                "     cs.accession, cs.sequence, cs.description AS prot_description, cps.canonical_smiles, "+
                 "     md.pref_name AS mol_pref_name, pc.pref_name AS prot_pref_name," +
                 "     pc.short_name " +
                 "FROM (select @rownum := 0) r, activities act, assays asy,  " +

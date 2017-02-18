@@ -23,7 +23,17 @@ function setTextBoxText(textBoxElement, value){
 }
 
 $(document).ready(function () {
-	var molSimTable = $('#ligandSimilarityTable').DataTable();
+	var molSimTable = $('#ligandSimilarityTable').DataTable(
+        {
+        colReorder: true,
+        dom: 'Bfrtip',
+        buttons: [
+            'copyHtml5',
+            'excelHtml5',
+            'csvHtml5',
+            'pdfHtml5'
+        ]
+    } );
     var protSimTable = $('#proteinSimilarityTable').DataTable();
     var testLigandDataTable = $('#testLigandDataTable').DataTable();
     var testProteinDataTable = $('#testProteinDataTable').DataTable();
@@ -38,6 +48,14 @@ $(document).ready(function () {
     fillDropDown("ligFP2", ligSimilarityFingerprints, 0);
     setTextBoxText("ligTH1", "0.8");
     setTextBoxText("ligTH2", "0.5");
+
+    molSimTable.column(2).visible(false);
+    molSimTable.column(3).visible(false);            
+    molSimTable.column(4).visible(false);
+    molSimTable.column(10).visible(false);            
+    molSimTable.column(13).visible(false);
+    molSimTable.column(14).visible(false);
+    molSimTable.colReorder.order( [ 0, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11, 13, 14] );
     
     // populate ligand test data table
     $.ajax({
@@ -254,10 +272,15 @@ $(document).ready(function () {
         success: function (response) {				
             var res = JSON.parse(response);
             molSimTable.rows().clear();
-            molSimTable.column(2).visible(false);
-            molSimTable.column(3).visible(false);
-            molSimTable.column(4).visible(false);
+            molSimTable.colReorder.reset();
+            // molSimTable.column(2).visible(false);
+            // molSimTable.column(3).visible(false);            
+            // molSimTable.column(4).visible(false);
+            // molSimTable.column(10).visible(false);            
+            // molSimTable.column(13).visible(false);
+            // molSimTable.column(14).visible(false);
             molSimTable.rows.add(res).draw();
+            molSimTable.colReorder.order( [ 0, 15, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11, 13, 14] );
 
             var knownLigandsUniqueCompId = document.getElementById("knownLigandsUniqueCompId");
             knownLigandsUniqueCompId.innerHTML = "( ";
